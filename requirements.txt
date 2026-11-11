@@ -1,4 +1,9 @@
 requests>=2.31
 numpy>=1.26
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
 # İsteğe bağlı: konuşmayı yazıya çevirme (altyazı üretimi) için
 # faster-whisper>=1.0
+# İsteğe bağlı: Türkçe seslendirme için (bkz. asistan/studyo/ses.py)
+# piper-tts>=1.2

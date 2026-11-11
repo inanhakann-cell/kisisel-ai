@@ -1,19 +1,31 @@
 """Stüdyo: senaryo → sahne üretimi → düzenleme → montaj akışını yönetir."""
+import math
 import tempfile
+import threading
 from pathlib import Path
 
 from .. import ayarlar
-from ..medya import ffmpeg, filtre_yolu, son_kare, sure, yazi_tipi_secenegi
+from ..medya import ffmpeg, filtre_yolu, kesintisiz_birlestir, son_kare, sure, yazi_tipi_secenegi
 from .motorlar import Motor, motor_al
+from . import ses
 from .proje import Proje, Sahne, guvenli_ad, projeler_dizini
-from .senaryo import EN_AZ_SURE, EN_COK_SURE, senaryo_yaz, tam_istem
+from .senaryo import EN_AZ_SURE, senaryo_yaz, tam_istem, uzun_cekim_planla, uzun_senaryo_yaz
+
+# Tek bir sahnenin alabileceği en uzun süre (uzun çekimler otomatik parçalanır)
+SAHNE_AZAMI_SURE = 600.0
+
+# GPU aynı anda tek üretim yapsın (sohbet ve web paneli aynı anda üretim isteyebilir)
+URETIM_KILIDI = threading.Lock()
 
 
 class Studyo:
-    def __init__(self, motor: Motor | None = None, model_cagir=None):
-        """model_cagir: (mesajlar) -> str. Verilmezse Ollama'daki sohbet modeli kullanılır."""
+    def __init__(self, motor: Motor | None = None, model_cagir=None, ilerleme=None, seslendirici=None):
+        """model_cagir: (mesajlar) -> str. Verilmezse Ollama'daki sohbet modeli kullanılır.
+        ilerleme: (mesaj: str) -> None; uzun işlerde durum bildirmek için."""
         self.motor = motor or motor_al()
         self._model_cagir = model_cagir
+        self.ilerleme = ilerleme or (lambda mesaj: None)
+        self.seslendirici = seslendirici or ses.seslendir  # (metin, hedef) -> Path | None
 
     def model_cagir(self, mesajlar: list[dict]) -> str:
         if self._model_cagir is None:
@@ -24,35 +36,43 @@ class Studyo:
 
     # ---------- Proje ----------
     def proje_olustur(self, fikir: str, sahne_sayisi: int = 5, stil: str = "sinematik",
-                      ad: str | None = None) -> Proje:
-        senaryo = senaryo_yaz(fikir, self.model_cagir, sahne_sayisi, stil)
+                      ad: str | None = None, hedef_dakika: float | None = None) -> Proje:
+        """hedef_dakika verilirse bölümlü uzun video senaryosu yazılır (ör. 10 dakikalık YouTube videosu)."""
+        if hedef_dakika:
+            senaryo = uzun_senaryo_yaz(fikir, self.model_cagir, float(hedef_dakika), stil, self.ilerleme)
+        else:
+            senaryo = senaryo_yaz(fikir, self.model_cagir, sahne_sayisi, stil)
         ad = guvenli_ad(ad or senaryo["baslik"])
         temel, i = ad, 2
         while (projeler_dizini() / ad).exists():
             ad, i = f"{temel}-{i}", i + 1
         proje = Proje(ad=ad, baslik=senaryo["baslik"], fikir=fikir, stil=senaryo["stil"],
                       karakterler=senaryo["karakterler"],
-                      sahneler=[Sahne(no=i, **s) for i, s in enumerate(senaryo["sahneler"], 1)])
+                      sahneler=[Sahne(no=i, **s) for i, s in enumerate(senaryo["sahneler"], 1)],
+                      bolumler=senaryo.get("bolumler", []))
         proje.kaydet()
         return proje
 
     def sahne_duzenle(self, proje: Proje, no: int, **alanlar) -> Sahne:
         """Sahnenin istem, açıklama, süre, kamera, devam, seslendirme alanlarını değiştirir."""
         sahne = proje.sahne(no)
-        izinli = {"aciklama", "istem", "sure", "kamera", "devam", "seslendirme"}
+        izinli = {"aciklama", "istem", "sure", "kamera", "devam", "seslendirme", "parca_istemleri"}
         for k, v in alanlar.items():
             if k not in izinli:
                 raise ValueError(f"'{k}' düzenlenemez. İzinli alanlar: {sorted(izinli)}")
             if v is not None:
-                setattr(sahne, k, min(max(float(v), EN_AZ_SURE), EN_COK_SURE) if k == "sure" else v)
+                setattr(sahne, k, min(max(float(v), EN_AZ_SURE), SAHNE_AZAMI_SURE) if k == "sure" else v)
         proje.kaydet()
         return sahne
 
     def sahne_ekle(self, proje: Proje, sonra: int, aciklama: str, istem: str | None = None,
-                   sure: float = 5.0, kamera: str = "", devam: bool = False, seslendirme: str = "") -> Sahne:
+                   sure: float = 5.0, kamera: str = "", devam: bool = False, seslendirme: str = "",
+                   parca_istemleri: list[str] | None = None) -> Sahne:
         """`sonra` numaralı sahneden sonra yeni sahne ekler (0 = en başa)."""
-        yeni = Sahne(no=0, aciklama=aciklama, istem=istem or aciklama, sure=sure, kamera=kamera,
-                     devam=devam and sonra > 0, seslendirme=seslendirme)
+        yeni = Sahne(no=0, aciklama=aciklama, istem=istem or aciklama,
+                     sure=min(max(float(sure), EN_AZ_SURE), SAHNE_AZAMI_SURE), kamera=kamera,
+                     devam=devam and sonra > 0, seslendirme=seslendirme,
+                     parca_istemleri=list(parca_istemleri or []))
         konum = 0 if sonra == 0 else proje.sahneler.index(proje.sahne(sonra)) + 1
         proje.sahneler.insert(konum, yeni)
         proje.numaralari_duzelt()
@@ -86,20 +106,68 @@ class Studyo:
                                    f"üretilmeli.")
             baslangic = son_kare(onceki.secili_klip, proje.dizin / f"sahne{no:02}_baslangic.png")
         hedef = proje.dizin / f"sahne{no:02}_cekim{len(sahne.cekimler) + 1}.mp4"
-        self.motor.uret(tam_istem(sahne, proje.karakterler, proje.stil), sahne.sure, hedef,
-                        baslangic_karesi=baslangic, tohum=tohum)
+        parca_sayisi = max(1, math.ceil(sahne.sure / self.motor.azami_sure - 1e-6))
+        if parca_sayisi == 1:
+            with URETIM_KILIDI:
+                self.motor.uret(tam_istem(sahne, proje.karakterler, proje.stil), sahne.sure, hedef,
+                                baslangic_karesi=baslangic, tohum=tohum)
+        else:
+            self._uzun_cekim_uret(proje, sahne, hedef, parca_sayisi, baslangic, tohum)
         sahne.cekimler.append(str(hedef))
         sahne.secili = len(sahne.cekimler) - 1
         proje.kaydet()
         return hedef
 
+    def _uzun_cekim_uret(self, proje: Proje, sahne: Sahne, hedef: Path, parca_sayisi: int,
+                         baslangic: Path | None, tohum: int | None) -> None:
+        """Model sınırından uzun sahneyi parça parça üretir: her parça bir öncekinin son karesinden
+        başlar, sonunda hepsi geçişsiz birleştirilir → tek, kesintisiz uzun çekim."""
+        parca_suresi = sahne.sure / parca_sayisi
+        parcalar: list[Path] = []
+        gecici: list[Path] = []
+        try:
+            for i in range(parca_sayisi):
+                self.ilerleme(f"Sahne {sahne.no}: uzun çekim parçası {i + 1}/{parca_sayisi}")
+                istem = sahne.parca_istemleri[i] if i < len(sahne.parca_istemleri) else None
+                parca = hedef.with_name(f"{hedef.stem}_parca{i + 1:02}.mp4")
+                with URETIM_KILIDI:
+                    self.motor.uret(tam_istem(sahne, proje.karakterler, proje.stil, istem), parca_suresi, parca,
+                                    baslangic_karesi=baslangic, tohum=tohum)
+                parcalar.append(parca)
+                if i < parca_sayisi - 1:
+                    baslangic = son_kare(parca, hedef.with_name(f"{hedef.stem}_parca{i + 1:02}_son.png"))
+                    gecici.append(baslangic)
+            kesintisiz_birlestir(parcalar, hedef, self.motor.genislik, self.motor.yukseklik, self.motor.fps)
+        finally:
+            for f in parcalar + gecici:
+                Path(f).unlink(missing_ok=True)
+
+    def uzun_cekim_ekle(self, proje: Proje, sonra: int, aciklama: str, sure: float, istem: str | None = None,
+                        kamera: str = "smooth continuous tracking shot, one take", devam: bool = False,
+                        planla: bool = True, uret: bool = True) -> Sahne:
+        """Tek kesintisiz uzun çekim sahnesi ekler (ör. 60 sn). planla=True ise model, çekimi
+        parçalara bölüp her parçada ne olacağını yazar; uret=True ise hemen üretilir."""
+        sure = min(max(float(sure), EN_AZ_SURE), SAHNE_AZAMI_SURE)
+        istem = istem or aciklama
+        parca = max(1, math.ceil(sure / self.motor.azami_sure - 1e-6))
+        parca_istemleri = []
+        if planla and parca > 1:
+            try:
+                parca_istemleri = uzun_cekim_planla(istem, parca, sure / parca, self.model_cagir)
+            except Exception as e:  # plan yazılamazsa aynı istemle devam et
+                self.ilerleme(f"Uzun çekim planı yazılamadı ({e}); tek istemle üretilecek.")
+        sahne = self.sahne_ekle(proje, sonra, aciklama, istem, sure, kamera, devam, "", parca_istemleri)
+        if uret:
+            self.sahne_uret(proje, sahne.no)
+        return sahne
+
     def tumunu_uret(self, proje: Proje, sadece_eksikler: bool = True, ilerleme=None) -> list[Path]:
+        bildir = ilerleme or self.ilerleme
         uretilen = []
         for sahne in proje.sahneler:
             if sadece_eksikler and sahne.cekimler:
                 continue
-            if ilerleme:
-                ilerleme(f"Sahne {sahne.no}/{len(proje.sahneler)} üretiliyor: {sahne.aciklama}")
+            bildir(f"Sahne {sahne.no}/{len(proje.sahneler)} üretiliyor: {sahne.aciklama}")
             uretilen.append(self.sahne_uret(proje, sahne.no))
         return uretilen
 
@@ -121,8 +189,9 @@ class Studyo:
 
     # ---------- Montaj ----------
     def montaj(self, proje: Proje, muzik: str | None = None, muzik_seviyesi: float = 0.35,
-               gecis: float = 0.5, altyazi: bool = True, ad: str | None = None) -> Path:
-        """Seçili çekimleri birleştirir: sahneler arası geçiş, altyazı ve arka plan müziği."""
+               gecis: float = 0.5, altyazi: bool = True, ad: str | None = None,
+               seslendirme: bool = True) -> Path:
+        """Seçili çekimleri birleştirir: sahneler arası geçiş, altyazı, seslendirme ve arka plan müziği."""
         klipler = [s.secili_klip for s in proje.sahneler]
         eksik = [s.no for s in proje.sahneler if s.secili_klip is None]
         if eksik:
@@ -168,14 +237,46 @@ class Studyo:
 
         argumanlar = [*girdiler]
         ses_haritasi: list[str] = []
+        sonraki_girdi = len(klipler)
+
+        # Seslendirme: her sahnenin anlatımı kendi başlangıç anına yerleştirilir
+        anlatim_etiketleri = []
+        if seslendirme:
+            for i, s in enumerate(proje.sahneler):
+                if not s.seslendirme.strip():
+                    continue
+                self.ilerleme(f"Seslendirme: sahne {s.no}")
+                wav = self.seslendirici(s.seslendirme, proje.dizin / f"anlatim{s.no:02}.wav")
+                if wav is None:
+                    break  # seslendirici kurulu değil
+                argumanlar += ["-i", str(wav)]
+                ms = int((baslangiclar[i] + 0.3) * 1000)
+                filtreler.append(f"[{sonraki_girdi}:a]aresample=48000,atrim=0:{max(sureler[i] - 0.3, 0.5):.3f},"
+                                 f"adelay={ms}:all=1[n{i}]")
+                anlatim_etiketleri.append(f"[n{i}]")
+                sonraki_girdi += 1
+        if anlatim_etiketleri:
+            filtreler.append("".join(anlatim_etiketleri) +
+                             f"amix=inputs={len(anlatim_etiketleri)}:normalize=0:dropout_transition=0[anlatim]")
+
+        muzik_var = False
         if muzik:
             if not Path(muzik).exists():
                 raise FileNotFoundError(f"Müzik dosyası yok: {muzik}")
             argumanlar += ["-stream_loop", "-1", "-i", muzik]
-            m = len(klipler)
-            filtreler.append(f"[{m}:a]volume={muzik_seviyesi},afade=t=in:d=1,"
-                             f"afade=t=out:st={max(toplam - 2, 0):.2f}:d=2,atrim=0:{toplam:.3f}[a]")
-            ses_haritasi = ["-map", "[a]", "-c:a", "aac"]
+            seviye = muzik_seviyesi * (0.45 if anlatim_etiketleri else 1)  # anlatım varken müzik kısılır
+            filtreler.append(f"[{sonraki_girdi}:a]aresample=48000,volume={seviye:.3f},afade=t=in:d=1,"
+                             f"afade=t=out:st={max(toplam - 2, 0):.2f}:d=2,atrim=0:{toplam:.3f}[muzik]")
+            muzik_var = True
+
+        if anlatim_etiketleri and muzik_var:
+            filtreler.append(f"[muzik][anlatim]amix=inputs=2:normalize=0:duration=first,atrim=0:{toplam:.3f}[a]")
+        elif anlatim_etiketleri:
+            filtreler.append(f"[anlatim]apad,atrim=0:{toplam:.3f}[a]")
+        elif muzik_var:
+            filtreler.append("[muzik]anull[a]")
+        if anlatim_etiketleri or muzik_var:
+            ses_haritasi = ["-map", "[a]", "-c:a", "aac", "-b:a", "192k"]
 
         sira = len(proje.filmler) + 1
         hedef = proje.dizin / f"{guvenli_ad(ad) if ad else proje.ad}_v{sira}.mp4"
@@ -187,8 +288,20 @@ class Studyo:
             for d in gecici_dosyalar:
                 Path(d).unlink(missing_ok=True)
         proje.filmler.append(str(hedef))
+        proje.son_montaj = {"film": str(hedef), "sure": round(toplam, 3),
+                            "sahne_baslangiclari": [round(b, 3) for b in baslangiclar]}
         proje.kaydet()
         return hedef
+
+    # ---------- Yayın ----------
+    def youtube_paketi(self, proje: Proje, shorts: bool = True) -> dict:
+        from .yayin import youtube_paketi
+        self.ilerleme("YouTube paketi hazırlanıyor")
+        return youtube_paketi(proje, self.model_cagir, shorts)
+
+    def shorts(self, proje: Proje, baslangic: float = 0, uzunluk: float = 59, baslik: str = "") -> Path:
+        from .yayin import shorts_olustur
+        return shorts_olustur(proje, baslangic, uzunluk, baslik=baslik)
 
     @staticmethod
     def projeler() -> list[str]:

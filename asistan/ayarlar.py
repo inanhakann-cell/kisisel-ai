@@ -41,5 +41,10 @@ COMFYUI_GORSELDEN_IS_AKISI = os.environ.get(
 VIDEO_GENISLIK = int(os.environ.get("VIDEO_GENISLIK", "1280"))
 VIDEO_YUKSEKLIK = int(os.environ.get("VIDEO_YUKSEKLIK", "720"))
 VIDEO_FPS = int(os.environ.get("VIDEO_FPS", "24"))
+# Modelin tek seferde üretebildiği en uzun klip (saniye). Daha uzun sahneler otomatik olarak
+# parçalara bölünüp son kareden devam ettirilerek tek kesintisiz çekim halinde üretilir.
+MOTOR_AZAMI_SURE = float(os.environ.get("MOTOR_AZAMI_SURE", "5"))
 # Yazı tipi dosyası (Türkçe karakterli). Boşsa sistemde uygun olan aranır.
 YAZI_TIPI = os.environ.get("YAZI_TIPI", "")
+# Türkçe seslendirme için Piper ses modeli (.onnx). Boşsa seslendirme yapılmaz.
+PIPER_MODELI = os.environ.get("PIPER_MODELI", "")

@@ -58,3 +58,17 @@ def son_kare(video: str | os.PathLike, hedef: str | os.PathLike) -> Path:
     if not Path(hedef).exists():  # çok kısa videolarda -sseof boş dönebilir
         ffmpeg("-i", video, "-vf", "reverse", "-frames:v", "1", hedef)
     return Path(hedef)
+
+
+def kesintisiz_birlestir(klipler: list, hedef, genislik: int, yukseklik: int, fps: int) -> Path:
+    """Klipleri geçişsiz (tek çekim gibi) uç uca ekler; boyut/fps farklarını eşitler."""
+    girdiler, filtreler = [], []
+    for i, k in enumerate(klipler):
+        girdiler += ["-i", str(k)]
+        filtreler.append(f"[{i}:v]scale={genislik}:{yukseklik}:force_original_aspect_ratio=decrease,"
+                         f"pad={genislik}:{yukseklik}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={fps},"
+                         f"format=yuv420p[v{i}]")
+    filtreler.append("".join(f"[v{i}]" for i in range(len(klipler))) + f"concat=n={len(klipler)}:v=1:a=0[v]")
+    ffmpeg(*girdiler, "-filter_complex", ";".join(filtreler), "-map", "[v]", "-c:v", "libx264",
+           "-crf", "18", hedef)
+    return Path(hedef)
