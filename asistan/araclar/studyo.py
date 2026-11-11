@@ -170,6 +170,11 @@ def karakter_gorseli_sec(proje: str, ad: str, gorsel: int) -> str:
     return f"{ad} için {gorsel}. görsel referans yapıldı."
 
 
+def senaryo_dosyasi_yukle(dosya: str) -> str:
+    p = _s().senaryo_dosyasindan(dosya)
+    return "Senaryo yüklendi.\n" + p.ozet()
+
+
 def _t(ad, aciklama, ozellikler, gerekli):
     return {"type": "function", "function": {"name": ad, "description": aciklama, "parameters": {
         "type": "object", "properties": ozellikler, "required": gerekli}}}
@@ -240,6 +245,8 @@ TANIMLAR = [
        {"proje": _PROJE, "ad": _S, "adet": {"type": "integer"}}, ["proje", "ad"]),
     _t("karakter_gorseli_sec", "Karakterin referans görselini seçer (1'den başlar).",
        {"proje": _PROJE, "ad": _S, "gorsel": {"type": "integer"}}, ["proje", "ad", "gorsel"]),
+    _t("senaryo_dosyasi_yukle", "Hazır yazılmış senaryo JSON dosyasından (ör. senaryolar/ klasöründeki) proje kurar.",
+       {"dosya": _S}, ["dosya"]),
     _t("shorts_kes", "Filmin belirli bir anından dikey (9:16) en fazla 59 sn'lik Shorts/Reels/TikTok kesiti üretir.",
        {"proje": _PROJE, "baslangic": _N, "uzunluk": _N, "baslik": _S}, ["proje"]),
 ]

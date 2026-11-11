@@ -1,0 +1,105 @@
+{
+  "baslik": "Ugly Cute Aliens – Bölüm 2: Kedi",
+  "fikir": "Bölüm 1'in sonunda pil 5 saniye yetti. Yeni hedef: komşunun kedisinin elektrikli oyuncak faresindeki büyük pil. Fare uyuyan kedinin hemen yanında.",
+  "stil": "3D cartoon style, soft warm lighting, ugly-cute aliens, same character design as reference",
+  "karakterler": [
+    {
+      "ad": "Pof",
+      "tarif": "small alien, hairless, wrinkled gray-green skin, oversized head, tiny round glasses, huge glossy eyes, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Tit",
+      "tarif": "tiny alien, fully covered in soft cream-peach fur, eyes taking half of the face, trembling pose, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Lila",
+      "tarif": "glamorous pretty alien girl, compact proportions, smooth lavender-purple skin, two curled head tendrils, very long curled eyelashes, big sparkling eyes, full glossy pink lips, soft hourglass silhouette, fitted scrap-fabric top fully covering chest, patched fluffy mini skirt, small boots, pink ribbon scarf, tasteful and cute, 3D cartoon style"
+    },
+    {
+      "ad": "Grum",
+      "tarif": "small alien, half furry half bald, one eye bigger than the other, cape made from a sock, grumpy villain pose, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Bubu",
+      "tarif": "small rubbery alien, stretchy body, oversized wide mouth, mismatched eyes, goofy expression, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Kedi",
+      "tarif": "orange-and-white house cat with sleepy eyelids, fluffy, calm and curious, 3D cartoon style"
+    }
+  ],
+  "sahneler": [
+    {
+      "aciklama": "1. Hedef — Pof tahtaya fare+pil çizer, Tit kedi çizimini görünce titrer (Flow'da hazır)",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The gray alien finishes drawing on the chalkboard a toy mouse with a big battery inside and a sleeping cat next to it, then taps it proudly. The lavender girl and the green alien nod excitedly. The fluffy cream alien on the floor wakes up, sees the cat drawing, its fur puffs up and it trembles. Slow push-in toward the chalkboard.",
+      "sure": 8,
+      "devam": false,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "2. Sızma — salona sızarlar, Bubu ciyaklayan oyuncağa basar (Flow'da hazır)",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only whispered gibberish alien sounds, no real words, no text. The five aliens tiptoe in a line across the dark living room toward the sleeping cat in its basket. The lavender girl signals with her hand to go slowly. The green alien steps on a squeaky toy: a loud squeak, and everyone freezes mid-step. Slow tracking shot following them.",
+      "sure": 8,
+      "devam": false,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "3. Uyanış — Bubu'nun karnı guruldar, kedi tek gözünü açar (Flow'da hazır)",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The green alien's belly rumbles very loudly. The sleeping cat slowly opens one eye. Everyone freezes like statues; the gray alien tries to hide his chalkboard behind his back. Slow push-in on the cat's opening eye.",
+      "sure": 10,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "4. Tit'in şansı — Tit bayılır, kedi onu yavrusu sanıp sepete taşır",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only gibberish alien gasps, no real words, no text. The tiny fluffy alien faints from fear. The cat gently picks it up by the scruff in its mouth like a kitten and carries it back to its basket, away from the toy mouse. The others watch in horror, mouths open. Locked-off wide shot.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "5. Grum'un planı — Grum kediye meydan okur, kedi onu patisiyle yuvarlar",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only gibberish sounds and a deep evil cartoon laugh, no real words, no text. The half-furry purple villain alien steps forward, laughs dramatically and points commandingly at the cat. The cat calmly rolls him like a ball with one paw and pins him under it; he keeps trying to laugh under the paw. Medium shot.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "6. Pil — Pof ve Lila oyuncak fareden pili çıkarır",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only whispered gibberish alien sounds, no real words, no text. While the cat is busy, the gray alien and the lavender girl sneak to the electric toy mouse, open its back and pull out a big battery. They silently high-five. Close-up on their hands and the battery, then their happy faces.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "7. Kalkış — gemi pille parlar, havalanır, düşer (başlangıç: Bölüm 1'in son karesi, garaj)",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The aliens plug a big battery into the spaceship. Its lights blaze bright, the ship hovers a few centimeters off the floor, everyone cheers, then it drops with a thud and the lights go out. The gray alien calmly starts a new drawing on the chalkboard. Wide shot.",
+      "sure": 8,
+      "devam": false,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    },
+    {
+      "aciklama": "8. Final — gemi kapıyı kapatır, kedi pencereden bakar",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The spaceship suddenly lurches forward and bumps the garage door shut with a bang. Everyone turns slowly to the garage window: outside, the orange-and-white cat presses its face to the glass, staring curiously at the spaceship. Slow push-in toward the window.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": ""
+    }
+  ]
+}

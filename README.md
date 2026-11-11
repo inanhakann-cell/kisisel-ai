@@ -104,6 +104,12 @@ Projelerde her sahne kartında:
 **Karakterler** bölümünde her karakter için referans görseli üret ya da yükle. Seçili referans,
 karakterin adı geçen sahnelerin görsellerine verilir; böylece karakter her sahnede aynı görünür.
 
+## Hazır senaryo dosyaları
+
+`senaryolar/` klasöründeki JSON senaryolar (ör. `senaryolar/ugly-cute-aliens/bolum3.json`) model
+çağırmadan doğrudan proje olarak kurulur: **+ Yeni video → Senaryo dosyası** ya da
+`python studyo.py senaryo senaryolar/ugly-cute-aliens/bolum3.json`.
+
 ## Flow (veya başka araç) projesini taşıma
 
 Flow'da başladığın bir projeye burada devam edebilirsin:

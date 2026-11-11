@@ -1,4 +1,5 @@
 """Stüdyo: senaryo → sahne üretimi → düzenleme → montaj akışını yönetir."""
+import json
 import math
 import random
 import shutil
@@ -338,6 +339,43 @@ class Studyo:
         while (projeler_dizini() / ad).exists():
             ad, i = f"{temel}-{i}", i + 1
         proje = Proje(ad=ad, baslik=baslik, fikir=fikir or baslik, stil=stil, karakterler=list(karakterler or []))
+        proje.kaydet()
+        return proje
+
+    def senaryo_dosyasindan(self, dosya: str, ad: str | None = None) -> Proje:
+        """Hazır yazılmış bir senaryo JSON dosyasından proje kurar (model çağırmaz).
+
+        Biçim: {"baslik", "stil", "fikir", "karakterler": [{"ad", "tarif"}],
+                "bolumler": [...], "sahneler": [{"aciklama", "istem", "sure", "kamera", "devam",
+                "seslendirme", "bolum", "parca_istemleri"}]}"""
+        yol = Path(dosya).expanduser()
+        if not yol.is_file():
+            raise FileNotFoundError(f"Senaryo dosyası yok: {dosya}")
+        try:
+            veri = json.loads(yol.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Senaryo dosyası geçerli JSON değil: {e}")
+        sahne_alanlari = {"aciklama", "istem", "sure", "kamera", "devam", "seslendirme", "bolum", "parca_istemleri"}
+        sahneler = []
+        for i, sh in enumerate(veri.get("sahneler") or [], 1):
+            sh = {k: v for k, v in sh.items() if k in sahne_alanlari}
+            if not (sh.get("istem") or sh.get("aciklama")):
+                raise ValueError(f"{i}. sahnede istem ya da açıklama yok.")
+            sh.setdefault("istem", sh.get("aciklama"))
+            sh.setdefault("aciklama", sh["istem"][:80])
+            sh["sure"] = min(max(float(sh.get("sure", 5)), EN_AZ_SURE), SAHNE_AZAMI_SURE)
+            sh["devam"] = bool(sh.get("devam")) and i > 1
+            sahneler.append(Sahne(no=i, **sh))
+        if not sahneler:
+            raise ValueError("Senaryoda hiç sahne yok.")
+        baslik = str(veri.get("baslik") or yol.stem)
+        proje = self.bos_proje(ad or baslik, str(veri.get("stil", "")),
+                               [{"ad": k["ad"], "tarif": k["tarif"], "gorseller": [], "secili": -1}
+                                for k in veri.get("karakterler") or [] if k.get("ad") and k.get("tarif")],
+                               str(veri.get("fikir", "")))
+        proje.baslik = baslik
+        proje.sahneler = sahneler
+        proje.bolumler = list(veri.get("bolumler") or [])
         proje.kaydet()
         return proje
 

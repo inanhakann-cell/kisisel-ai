@@ -1,0 +1,112 @@
+{
+  "baslik": "Ugly Cute Aliens – Bölüm 3: Misafir",
+  "fikir": "Kedi gemiyi gördü ve garaja girdi. Gemiyi oyuncak sanıyor. Hedef: kediyi gemiden uzaklaştırmak. Plan patlar; Tit tesadüfen kurtarır ama gemi artık bir kedi yatağıdır.",
+  "stil": "3D cartoon style, soft warm lighting, ugly-cute aliens, same character design as reference",
+  "karakterler": [
+    {
+      "ad": "Pof",
+      "tarif": "small alien, hairless, wrinkled gray-green skin, oversized head, tiny round glasses, huge glossy eyes, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Tit",
+      "tarif": "tiny alien, fully covered in soft cream-peach fur, eyes taking half of the face, trembling pose, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Lila",
+      "tarif": "glamorous pretty alien girl, compact proportions, smooth lavender-purple skin, two curled head tendrils, very long curled eyelashes, big sparkling eyes, full glossy pink lips, soft hourglass silhouette, fitted scrap-fabric top fully covering chest, patched fluffy mini skirt, small boots, pink ribbon scarf, tasteful and cute, 3D cartoon style"
+    },
+    {
+      "ad": "Grum",
+      "tarif": "small alien, half furry half bald, one eye bigger than the other, cape made from a sock, grumpy villain pose, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Bubu",
+      "tarif": "small rubbery alien, stretchy body, oversized wide mouth, mismatched eyes, goofy expression, ugly-cute, 3D cartoon style"
+    },
+    {
+      "ad": "Kedi",
+      "tarif": "orange-and-white house cat with sleepy eyelids, fluffy, calm and curious, 3D cartoon style"
+    }
+  ],
+  "bolumler": [
+    {
+      "baslik": "Bölüm 3: Misafir",
+      "ozet": "Kedi garaja girer, gemiyle oynar; ışık noktası planı ve Grum'un kedi süvariliği; gemi kedi yatağı olur.",
+      "sure": 64
+    }
+  ],
+  "sahneler": [
+    {
+      "aciklama": "1. Misafir — kedi pencereyi itip garaja atlar, herkes saklanır, Tit ortada donar",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The orange-and-white cat pushes the garage window open with its head and drops softly onto the workbench. The aliens scatter in panic and hide behind paint cans; the tiny fluffy alien freezes alone in the middle of the floor, fur puffed up. Medium wide shot.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "2. Oyuncak gemi — kedi gemiyi koklar, patiler, oyuncak gibi iter",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The cat sniffs the crashed spaceship and pats it with one paw; the ship's lights blink. Delighted, the cat pushes the ship across the floor like a toy and chases it. From behind the paint cans the aliens peek out in horror, mouths open. Low camera angle at floor level.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "3. Plan — Pof tahtaya kedi + ışık noktası + ok çizer, Bubu tebeşiri yalar",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. Behind the paint cans, the gray alien quickly draws a plan on his small chalkboard: a cat, a dot of light and an arrow pointing away from the ship. The lavender girl nods with a sly smile; the green alien licks the chalk and makes a disgusted face. Close-up on the chalkboard, then their faces.",
+      "sure": 8,
+      "devam": false,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "4. Işık noktası — Lila gemi fenerini tutar, kedi ışığı kovalar",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The lavender alien girl aims a tiny flashlight from the spaceship's dashboard; a small bright dot of light appears on the floor. The cat's pupils go huge, it wiggles its bottom and pounces, chasing the dot across the garage, away from the ship. The gray alien nods proudly. Wide shot following the dot.",
+      "sure": 8,
+      "devam": false,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "5. Grum'un hamlesi — Grum koşan kedinin sırtına atlar, süvari gibi kahkaha atar",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only gibberish sounds and a deep evil cartoon laugh, no real words, no text. The half-furry purple villain alien jumps onto the running cat's back like a knight on a steed, raises a fist and laughs dramatically, his sock cape flapping. The cat speeds up wildly around the garage. Fast tracking shot.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "6. Kaos — raflar devrilir, Bubu yay yutup zıplar, Tit tavana yapışıp bayılır",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only gibberish alien screams and cartoon sound effects, no real words, no text. Chaos in the garage: the cat zooms into a shelf and boxes and screws rain down. The green alien catches a falling metal spring, swallows it and starts bouncing around like a rubber ball with boing sounds. The tiny fluffy alien puffs up, sticks to the ceiling, then faints and falls. Fast handheld-style camera.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "7. Tit'in şansı — Tit sıcak geminin üstüne düşer, kedi onu yavrusu sanıp gemiye kıvrılır",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The fainted tiny fluffy alien lands softly on the warm roof of the spaceship. The cat stops, sees the fluffy little alien, thinks it is a kitten, gently licks its head and curls up around the ship and the alien, purring. The villain alien slides off the cat's back into a pile of rags. Medium shot, slow push-in.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    },
+    {
+      "aciklama": "8. Final — gemi artık kedi yatağı; Pof sakince yeni plan çizer",
+      "istem": "Stylized 3D animated cartoon. Keep the exact characters, colors and style from the image. Wordless comedy: only short gibberish alien sounds, no real words, no text. The cat sleeps curled around the whole spaceship, purring loudly; the ship's lights glow softly under its fur. The aliens stare in silence. The lavender girl sighs; the gray alien calmly wipes his chalkboard and starts drawing a new plan. Slow camera pull-back to a wide shot.",
+      "sure": 8,
+      "devam": true,
+      "kamera": "",
+      "seslendirme": "",
+      "bolum": "Bölüm 3: Misafir"
+    }
+  ]
+}

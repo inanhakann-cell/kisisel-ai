@@ -68,6 +68,14 @@ def uygulama_olustur(ajan: Ajan | None = None, studyo: Studyo | None = None) -> 
         except FileNotFoundError as e:
             raise HTTPException(404, str(e))
 
+    async def _gecici_kaydet(dosya: UploadFile) -> Path:
+        dizin = ayarlar.CIKTI_DIZINI / "yuklemeler"
+        dizin.mkdir(parents=True, exist_ok=True)
+        hedef = dizin / f"{int(time.time() * 1000)}_{Path(dosya.filename or 'dosya').name}"
+        with hedef.open("wb") as f:
+            shutil.copyfileobj(dosya.file, f)
+        return hedef
+
     def studyo_isi(baslik: str, proje: str | None, fonk) -> dict:
         return _ozet(isler.baslat(baslik, fonk, "studyo", proje))
 
@@ -232,6 +240,17 @@ def uygulama_olustur(ajan: Ajan | None = None, studyo: Studyo | None = None) -> 
         p = studyo.bos_proje(baslik, str(govde.get("stil", "")), fikir=str(govde.get("fikir", "")))
         return proje_json(p)
 
+    @app.post("/api/senaryo-yukle")
+    async def senaryo_yukle(dosya: UploadFile = File(...)):
+        gecici = await _gecici_kaydet(dosya)
+        try:
+            p = studyo.senaryo_dosyasindan(str(gecici))
+        except (ValueError, FileNotFoundError) as e:
+            raise HTTPException(400, str(e))
+        finally:
+            gecici.unlink(missing_ok=True)
+        return proje_json(p)
+
     @app.post("/api/projeler/{ad}/ice-aktar")
     async def ice_aktar(ad: str, dosyalar: list[UploadFile] = File(...)):
         """Bir ya da birden çok klibi (dosya adı sırasıyla) projenin sonuna sahne olarak ekler."""
@@ -269,13 +288,6 @@ def uygulama_olustur(ajan: Ajan | None = None, studyo: Studyo | None = None) -> 
             gecici.unlink(missing_ok=True)
         return proje_json(p)
 
-    async def _gecici_kaydet(dosya: UploadFile) -> Path:
-        dizin = ayarlar.CIKTI_DIZINI / "yuklemeler"
-        dizin.mkdir(parents=True, exist_ok=True)
-        hedef = dizin / f"{int(time.time() * 1000)}_{Path(dosya.filename or 'dosya').name}"
-        with hedef.open("wb") as f:
-            shutil.copyfileobj(dosya.file, f)
-        return hedef
 
     # ---- Görseller ve Flow tarzı hızlı üretim ----
     @app.post("/api/hizli")
