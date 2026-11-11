@@ -1,0 +1,1 @@
+"""Kişisel yapay zeka asistanı."""
