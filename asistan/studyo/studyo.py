@@ -1,11 +1,12 @@
 """Stüdyo: senaryo → sahne üretimi → düzenleme → montaj akışını yönetir."""
 import math
+import shutil
 import tempfile
 import threading
 from pathlib import Path
 
 from .. import ayarlar
-from ..medya import ffmpeg, filtre_yolu, kesintisiz_birlestir, son_kare, sure, yazi_tipi_secenegi
+from ..medya import ffmpeg, filtre_yolu, kesintisiz_birlestir, ses_var_mi, son_kare, sure, yazi_tipi_secenegi
 from .motorlar import Motor, motor_al
 from . import ses
 from .proje import Proje, Sahne, guvenli_ad, projeler_dizini
@@ -179,6 +180,44 @@ class Studyo:
                                kamera=proje.sahne(no).kamera)
         return self.sahne_uret(proje, yeni.no)
 
+    def klip_ice_aktar(self, proje: Proje, dosya: str, no: int | None = None, aciklama: str = "",
+                       istem: str = "", sonra: int | None = None) -> Sahne:
+        """Dışarıda üretilmiş bir klibi (ör. Flow'dan indirilen) projeye çekim olarak ekler.
+
+        no verilirse o sahneye yeni çekim olur; verilmezse `sonra` numaralı sahneden sonra (boşsa en sona)
+        yeni sahne açılır. Klip proje klasörüne kopyalanır; sonraki sahneler son karesinden devam edebilir."""
+        kaynak = Path(dosya).expanduser()
+        if not kaynak.is_file():
+            raise FileNotFoundError(f"Klip bulunamadı: {dosya}")
+        uzunluk = sure(kaynak)
+        if no is None:
+            sonra = len(proje.sahneler) if sonra is None else int(sonra)
+            sahne = self.sahne_ekle(proje, sonra, aciklama or kaynak.stem, istem or aciklama or kaynak.stem,
+                                    min(max(uzunluk, EN_AZ_SURE), SAHNE_AZAMI_SURE))
+        else:
+            sahne = proje.sahne(int(no))
+        hedef = proje.dizin / f"sahne{sahne.no:02}_cekim{len(sahne.cekimler) + 1}_ice{kaynak.suffix.lower() or '.mp4'}"
+        if kaynak.suffix.lower() in (".mp4", ".mov", ".m4v"):
+            shutil.copy2(kaynak, hedef)
+        else:  # webm/gif vb. → mp4
+            hedef = hedef.with_suffix(".mp4")
+            ffmpeg("-i", kaynak, "-pix_fmt", "yuv420p", "-c:v", "libx264", "-c:a", "aac", hedef)
+        sahne.cekimler.append(str(hedef))
+        sahne.secili = len(sahne.cekimler) - 1
+        sahne.sure = round(min(max(uzunluk, EN_AZ_SURE), SAHNE_AZAMI_SURE), 2)
+        proje.kaydet()
+        return sahne
+
+    def bos_proje(self, baslik: str, stil: str = "", karakterler: list[dict] | None = None,
+                  fikir: str = "") -> Proje:
+        """Senaryo yazdırmadan boş proje açar (ör. başka araçta başlanmış bir projeyi taşımak için)."""
+        ad, temel, i = guvenli_ad(baslik), guvenli_ad(baslik), 2
+        while (projeler_dizini() / ad).exists():
+            ad, i = f"{temel}-{i}", i + 1
+        proje = Proje(ad=ad, baslik=baslik, fikir=fikir or baslik, stil=stil, karakterler=list(karakterler or []))
+        proje.kaydet()
+        return proje
+
     def cekim_sec(self, proje: Proje, no: int, cekim: int) -> None:
         """cekim: 1'den başlayan çekim numarası."""
         sahne = proje.sahne(no)
@@ -190,7 +229,7 @@ class Studyo:
     # ---------- Montaj ----------
     def montaj(self, proje: Proje, muzik: str | None = None, muzik_seviyesi: float = 0.35,
                gecis: float = 0.5, altyazi: bool = True, ad: str | None = None,
-               seslendirme: bool = True) -> Path:
+               seslendirme: bool = True, klip_sesi: bool = True) -> Path:
         """Seçili çekimleri birleştirir: sahneler arası geçiş, altyazı, seslendirme ve arka plan müziği."""
         klipler = [s.secili_klip for s in proje.sahneler]
         eksik = [s.no for s in proje.sahneler if s.secili_klip is None]
@@ -255,6 +294,14 @@ class Studyo:
                                  f"adelay={ms}:all=1[n{i}]")
                 anlatim_etiketleri.append(f"[n{i}]")
                 sonraki_girdi += 1
+        # Kliplerin kendi sesi (ör. Flow/Veo klipleri konuşma ve efektle gelir): sahnenin anına yerleşir
+        if klip_sesi:
+            for i, k in enumerate(klipler):
+                if ses_var_mi(k):
+                    ms = int(baslangiclar[i] * 1000)
+                    filtreler.append(f"[{i}:a]aresample=48000,atrim=0:{sureler[i]:.3f},afade=t=out:"
+                                     f"st={max(sureler[i] - 0.15, 0):.3f}:d=0.15,adelay={ms}:all=1[k{i}]")
+                    anlatim_etiketleri.append(f"[k{i}]")
         if anlatim_etiketleri:
             filtreler.append("".join(anlatim_etiketleri) +
                              f"amix=inputs={len(anlatim_etiketleri)}:normalize=0:dropout_transition=0[anlatim]")

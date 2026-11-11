@@ -219,6 +219,51 @@ def uygulama_olustur(ajan: Ajan | None = None, studyo: Studyo | None = None) -> 
         yeni = studyo.sahne_ekle(p, sonra, aciklama, istem, sure, devam=bool(govde.get("devam")))
         return {"no": yeni.no}
 
+    @app.post("/api/bos-proje")
+    def bos_proje(govde: dict = Body(...)):
+        baslik = str(govde.get("baslik", "")).strip()
+        if not baslik:
+            raise HTTPException(400, "Başlık boş")
+        p = studyo.bos_proje(baslik, str(govde.get("stil", "")), fikir=str(govde.get("fikir", "")))
+        return proje_json(p)
+
+    @app.post("/api/projeler/{ad}/ice-aktar")
+    async def ice_aktar(ad: str, dosyalar: list[UploadFile] = File(...)):
+        """Bir ya da birden çok klibi (dosya adı sırasıyla) projenin sonuna sahne olarak ekler."""
+        p = yukle(ad)
+        dizin = ayarlar.CIKTI_DIZINI / "yuklemeler"
+        dizin.mkdir(parents=True, exist_ok=True)
+        eklenen = []
+        for d in sorted(dosyalar, key=lambda d: d.filename or ""):
+            gecici = dizin / f"{int(time.time() * 1000)}_{Path(d.filename or 'klip.mp4').name}"
+            with gecici.open("wb") as f:
+                shutil.copyfileobj(d.file, f)
+            try:
+                sahne = studyo.klip_ice_aktar(p, str(gecici), aciklama=Path(d.filename or "klip").stem)
+            except Exception as e:
+                raise HTTPException(400, f"{d.filename}: video okunamadı ({e})")
+            finally:
+                gecici.unlink(missing_ok=True)
+            eklenen.append(sahne.no)
+        return {"eklenen": eklenen, "proje": proje_json(p)}
+
+    @app.post("/api/projeler/{ad}/sahneler/{no}/ice-aktar")
+    async def sahneye_ice_aktar(ad: str, no: int, dosya: UploadFile = File(...)):
+        p = yukle(ad)
+        p.sahne(no)
+        dizin = ayarlar.CIKTI_DIZINI / "yuklemeler"
+        dizin.mkdir(parents=True, exist_ok=True)
+        gecici = dizin / f"{int(time.time() * 1000)}_{Path(dosya.filename or 'klip.mp4').name}"
+        with gecici.open("wb") as f:
+            shutil.copyfileobj(dosya.file, f)
+        try:
+            studyo.klip_ice_aktar(p, str(gecici), no=no)
+        except Exception as e:
+            raise HTTPException(400, f"Video okunamadı: {e}")
+        finally:
+            gecici.unlink(missing_ok=True)
+        return proje_json(p)
+
     @app.patch("/api/projeler/{ad}/sahneler/{no}")
     def sahne_duzenle(ad: str, no: int, govde: dict = Body(...)):
         p = yukle(ad)

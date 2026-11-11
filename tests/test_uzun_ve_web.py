@@ -200,3 +200,58 @@ class WebTesti(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(FFMPEG, "ffmpeg yok")
+class IceAktarmaTesti(unittest.TestCase):
+    def test_flow_klipleri_ile_devam(self):
+        dizin = Path(ayarlar.VERI_DIZINI) / "flow"
+        dizin.mkdir(exist_ok=True)
+        klipler = []
+        for i, frekans in enumerate((300, 500), 1):  # Flow klipleri gibi: sesli, farklı çözünürlük
+            yol = dizin / f"flow_sahne{i}.mp4"
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=s=640x360:r=24",
+                            "-f", "lavfi", "-i", f"sine=frequency={frekans}", "-t", "3", "-pix_fmt", "yuv420p",
+                            "-shortest", str(yol)], check=True)
+            klipler.append(yol)
+        st = Studyo(motor=TaslakMotor(), model_cagir=sahte_model, seslendirici=lambda m, h: None)
+        proje = st.bos_proje("Anime Bölüm 1", "anime style")
+        for k in klipler:
+            st.klip_ice_aktar(proje, str(k))
+        self.assertEqual([s.aciklama for s in proje.sahneler], ["flow_sahne1", "flow_sahne2"])
+        self.assertAlmostEqual(proje.sahne(1).sure, 3, delta=0.1)
+        # Flow'dan sonrasını biz üretelim: son karesinden devam
+        st.sahne_uzat(proje, 2, "the hero runs into the forest", sure=2)
+        self.assertTrue(proje.sahne(3).devam and proje.sahne(3).secili_klip.exists())
+        # aynı sahneye ikinci çekim içe aktar
+        st.klip_ice_aktar(proje, str(klipler[0]), no=1)
+        self.assertEqual(len(proje.sahne(1).cekimler), 2)
+        film = st.montaj(proje, gecis=0.3)
+        akislar = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of",
+                                  "csv=p=0", str(film)], capture_output=True, text=True).stdout.split()
+        self.assertIn("audio", akislar)  # Flow kliplerinin sesi korundu
+        with self.assertRaises(FileNotFoundError):
+            st.klip_ice_aktar(proje, "yok.mp4")
+
+    @unittest.skipUnless(TestClient, "fastapi yok")
+    def test_web_ice_aktarma(self):
+        from asistan.web.sunucu import uygulama_olustur
+        from asistan.ajan import Ajan
+        from asistan.hafiza import Hafiza
+        llm = SahteLLM()
+        c = TestClient(uygulama_olustur(Ajan(istemci=llm, hafiza=Hafiza(lambda m: llm.gomme("", m),
+                                                                          Path(ayarlar.VERI_DIZINI) / "ih.json")),
+                                        Studyo(motor=TaslakMotor(), model_cagir=sahte_model)))
+        p = c.post("/api/bos-proje", json={"baslik": "Flow Taşıma", "stil": "anime"}).json()
+        klip = Path(ayarlar.VERI_DIZINI) / "web_klip.mp4"
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=s=320x180:r=12",
+                        "-t", "2", "-pix_fmt", "yuv420p", str(klip)], check=True)
+        r = c.post(f"/api/projeler/{p['ad']}/ice-aktar",
+                   files=[("dosyalar", ("b_ikinci.mp4", klip.read_bytes(), "video/mp4")),
+                          ("dosyalar", ("a_birinci.mp4", klip.read_bytes(), "video/mp4"))]).json()
+        self.assertEqual([s["aciklama"] for s in r["proje"]["sahneler"]], ["a_birinci", "b_ikinci"])
+        r = c.post(f"/api/projeler/{p['ad']}/sahneler/1/ice-aktar",
+                   files={"dosya": ("x.mp4", klip.read_bytes(), "video/mp4")}).json()
+        self.assertEqual(len(r["sahneler"][0]["cekimler"]), 2)
+        bozuk = c.post(f"/api/projeler/{p['ad']}/ice-aktar", files=[("dosyalar", ("k.mp4", b"bozuk", "video/mp4"))])
+        self.assertEqual(bozuk.status_code, 400)
