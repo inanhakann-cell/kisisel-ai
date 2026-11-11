@@ -34,6 +34,11 @@ def proje_json(proje: Proje) -> dict:
     veri = asdict(proje)
     for s, sahne in zip(veri["sahneler"], proje.sahneler):
         s["cekim_urlleri"] = [medya_url(c) for c in sahne.cekimler]
+        s["gorsel_urlleri"] = [medya_url(g) for g in sahne.gorseller]
+    for k in veri["karakterler"]:
+        k.setdefault("gorseller", [])
+        k.setdefault("secili", -1)
+        k["gorsel_urlleri"] = [medya_url(g) for g in k["gorseller"]]
     veri["film_urlleri"] = [{"yol": f, "url": medya_url(f)} for f in proje.filmler]
     yayin = dict(proje.yayin or {})
     for anahtar in ("kapak", "shorts"):
@@ -260,6 +265,102 @@ def uygulama_olustur(ajan: Ajan | None = None, studyo: Studyo | None = None) -> 
             studyo.klip_ice_aktar(p, str(gecici), no=no)
         except Exception as e:
             raise HTTPException(400, f"Video okunamadı: {e}")
+        finally:
+            gecici.unlink(missing_ok=True)
+        return proje_json(p)
+
+    async def _gecici_kaydet(dosya: UploadFile) -> Path:
+        dizin = ayarlar.CIKTI_DIZINI / "yuklemeler"
+        dizin.mkdir(parents=True, exist_ok=True)
+        hedef = dizin / f"{int(time.time() * 1000)}_{Path(dosya.filename or 'dosya').name}"
+        with hedef.open("wb") as f:
+            shutil.copyfileobj(dosya.file, f)
+        return hedef
+
+    # ---- Görseller ve Flow tarzı hızlı üretim ----
+    @app.post("/api/hizli")
+    def hizli(govde: dict = Body(...)):
+        istem = str(govde.get("istem", "")).strip()
+        if not istem:
+            raise HTTPException(400, "İstem boş")
+        proje_ad = govde.get("proje") or None
+        if proje_ad:
+            yukle(proje_ad)
+        sure = float(govde.get("sure") or 8)
+        gorsel_once = bool(govde.get("gorsel_once", True))
+
+        def is_():
+            p = Proje.yukle(proje_ad) if proje_ad else None
+            sahne = studyo.istemden_video(istem, sure, gorsel_once, p)
+            return {"proje": p.ad if p else studyo.HIZLI_PROJE, "sahne": sahne.no}
+        return studyo_isi(f"İstemden video: {istem[:30]}", proje_ad or studyo.HIZLI_PROJE, is_)
+
+    @app.post("/api/projeler/{ad}/sahneler/{no}/gorsel")
+    def sahne_gorsel_uret(ad: str, no: int, govde: dict = Body(default={})):
+        yukle(ad).sahne(no)
+        adet = max(1, min(int(govde.get("adet", 2)), 8))
+        return studyo_isi(f"Sahne {no} görsel", ad, lambda: len(studyo.gorsel_uret(Proje.yukle(ad), no, adet)))
+
+    @app.post("/api/projeler/{ad}/sahneler/{no}/gorsel-sec")
+    def sahne_gorsel_sec(ad: str, no: int, govde: dict = Body(...)):
+        p = yukle(ad)
+        try:
+            studyo.gorsel_sec(p, no, int(govde["gorsel"]))
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, str(e))
+        return proje_json(p)
+
+    @app.post("/api/projeler/{ad}/sahneler/{no}/gorsel-yukle")
+    async def sahne_gorsel_yukle(ad: str, no: int, dosya: UploadFile = File(...)):
+        p = yukle(ad)
+        p.sahne(no)
+        gecici = await _gecici_kaydet(dosya)
+        try:
+            studyo.gorsel_yukle(p, no, str(gecici))
+        except Exception as e:
+            raise HTTPException(400, f"Görsel okunamadı: {e}")
+        finally:
+            gecici.unlink(missing_ok=True)
+        return proje_json(p)
+
+    @app.post("/api/projeler/{ad}/karakterler")
+    def karakter_ekle(ad: str, govde: dict = Body(...)):
+        p = yukle(ad)
+        isim, tarif = str(govde.get("ad", "")).strip(), str(govde.get("tarif", "")).strip()
+        if not isim or not tarif:
+            raise HTTPException(400, "Karakter adı ve tarifi gerekli")
+        studyo.karakter_ekle(p, isim, tarif)
+        return proje_json(p)
+
+    @app.post("/api/projeler/{ad}/karakterler/{isim}/gorsel")
+    def karakter_gorsel_uret(ad: str, isim: str, govde: dict = Body(default={})):
+        try:
+            yukle(ad).karakter(isim)
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        adet = max(1, min(int(govde.get("adet", 2)), 8))
+        return studyo_isi(f"{isim} referans görseli", ad,
+                          lambda: len(studyo.karakter_gorseli_uret(Proje.yukle(ad), isim, adet)))
+
+    @app.post("/api/projeler/{ad}/karakterler/{isim}/gorsel-sec")
+    def karakter_gorsel_sec(ad: str, isim: str, govde: dict = Body(...)):
+        p = yukle(ad)
+        try:
+            studyo.karakter_gorseli_sec(p, isim, int(govde["gorsel"]))
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, str(e))
+        return proje_json(p)
+
+    @app.post("/api/projeler/{ad}/karakterler/{isim}/gorsel-yukle")
+    async def karakter_gorsel_yukle(ad: str, isim: str, dosya: UploadFile = File(...)):
+        p = yukle(ad)
+        gecici = await _gecici_kaydet(dosya)
+        try:
+            studyo.karakter_gorseli_yukle(p, isim, str(gecici))
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        except Exception as e:
+            raise HTTPException(400, f"Görsel okunamadı: {e}")
         finally:
             gecici.unlink(missing_ok=True)
         return proje_json(p)

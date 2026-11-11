@@ -1,5 +1,6 @@
 """Stüdyo: senaryo → sahne üretimi → düzenleme → montaj akışını yönetir."""
 import math
+import random
 import shutil
 import tempfile
 import threading
@@ -99,8 +100,8 @@ class Studyo:
     def sahne_uret(self, proje: Proje, no: int, tohum: int | None = None) -> Path:
         """Sahne için yeni bir çekim üretir; öncekiler silinmez, yeni çekim seçili olur."""
         sahne = proje.sahne(no)
-        baslangic = None
-        if sahne.devam:
+        baslangic = sahne.baslangic_gorseli  # seçili görsel varsa video ondan başlar (görselden video)
+        if baslangic is None and sahne.devam:
             onceki = proje.onceki(no)
             if onceki is None or onceki.secili_klip is None:
                 raise RuntimeError(f"Sahne {no} öncekinin devamı; önce sahne {onceki.no if onceki else '?'} "
@@ -160,6 +161,128 @@ class Studyo:
         sahne = self.sahne_ekle(proje, sonra, aciklama, istem, sure, kamera, devam, "", parca_istemleri)
         if uret:
             self.sahne_uret(proje, sahne.no)
+        return sahne
+
+    # ---------- Görseller ----------
+    def _referanslar(self, proje: Proje, metin: str) -> list[Path]:
+        """Metinde adı geçen karakterlerin seçili referans görselleri."""
+        sonuc = []
+        for k in proje.karakterler:
+            gorseller, secili = k.get("gorseller") or [], k.get("secili", -1)
+            if k["ad"].lower() in metin.lower() and 0 <= secili < len(gorseller) and Path(gorseller[secili]).exists():
+                sonuc.append(Path(gorseller[secili]))
+        return sonuc
+
+    def gorsel_uret(self, proje: Proje, no: int, adet: int = 2) -> list[Path]:
+        """Sahne için `adet` görsel seçeneği üretir (farklı tohumlarla). Henüz seçili görsel yoksa
+        ilki seçilir; video bu görselden başlar."""
+        sahne = proje.sahne(no)
+        istem = tam_istem(sahne, proje.karakterler, proje.stil) + " Single still frame, first frame of the shot."
+        referanslar = self._referanslar(proje, f"{sahne.istem} {sahne.aciklama}")
+        yeni = []
+        for i in range(max(1, int(adet))):
+            self.ilerleme(f"Sahne {no}: görsel {i + 1}/{adet}")
+            hedef = proje.dizin / f"sahne{no:02}_gorsel{len(sahne.gorseller) + 1}.png"
+            with URETIM_KILIDI:
+                self.motor.gorsel_uret(istem, hedef, tohum=random.randint(0, 2**32 - 1), referanslar=referanslar)
+            sahne.gorseller.append(str(hedef))
+            yeni.append(hedef)
+        if sahne.secili_gorsel < 0:
+            sahne.secili_gorsel = len(sahne.gorseller) - len(yeni)
+        proje.kaydet()
+        return yeni
+
+    def _gorsel_kopyala(self, kaynak: Path, hedef: Path) -> Path:
+        kaynak = Path(kaynak).expanduser()
+        if not kaynak.is_file():
+            raise FileNotFoundError(f"Görsel bulunamadı: {kaynak}")
+        # Her zaman çözümleyip PNG'ye yaz: bozuk dosyalar burada yakalanır, jpg/webp de png olur
+        ffmpeg("-i", kaynak, "-frames:v", "1", "-update", "1", hedef)
+        if not hedef.exists() or hedef.stat().st_size == 0:
+            raise RuntimeError(f"Görsel okunamadı: {kaynak.name}")
+        return hedef
+
+    def gorsel_yukle(self, proje: Proje, no: int, dosya: str) -> Path:
+        """Kendi görselini sahnenin başlangıç karesi yapar (Flow'daki 'karelerden video' gibi)."""
+        sahne = proje.sahne(no)
+        hedef = self._gorsel_kopyala(Path(dosya), proje.dizin / f"sahne{no:02}_gorsel{len(sahne.gorseller) + 1}.png")
+        sahne.gorseller.append(str(hedef))
+        sahne.secili_gorsel = len(sahne.gorseller) - 1
+        proje.kaydet()
+        return hedef
+
+    def gorsel_sec(self, proje: Proje, no: int, gorsel: int) -> None:
+        """gorsel: 1'den başlayan görsel numarası; 0 = görsel kullanma (metinden video)."""
+        sahne = proje.sahne(no)
+        if not 0 <= gorsel <= len(sahne.gorseller):
+            raise ValueError(f"Sahne {no} için 0-{len(sahne.gorseller)} arası görsel seçilebilir.")
+        sahne.secili_gorsel = gorsel - 1
+        proje.kaydet()
+
+    # ---------- Karakterler ----------
+    def karakter_ekle(self, proje: Proje, ad: str, tarif: str) -> dict:
+        """Karakter ekler ya da tarifini günceller. Tarif İngilizce olursa modeller daha iyi anlar."""
+        try:
+            k = proje.karakter(ad)
+            k["tarif"] = tarif
+        except KeyError:
+            k = {"ad": ad.strip(), "tarif": tarif.strip(), "gorseller": [], "secili": -1}
+            proje.karakterler.append(k)
+        proje.kaydet()
+        return k
+
+    def karakter_gorseli_uret(self, proje: Proje, ad: str, adet: int = 2) -> list[Path]:
+        """Karakter referans görselleri üretir; seçilen görsel, adı geçen sahnelerin görsellerine referans olur."""
+        k = proje.karakter(ad)
+        istem = (f"Character reference sheet of {k['ad']}: {k['tarif'].rstrip('.')}. Full body, front view, "
+                 f"neutral pose, plain light background, clear face, consistent design."
+                 + (f" Style: {proje.stil.rstrip('.')}." if proje.stil else ""))
+        yeni = []
+        for i in range(max(1, int(adet))):
+            self.ilerleme(f"{k['ad']}: referans görseli {i + 1}/{adet}")
+            hedef = proje.dizin / f"karakter_{guvenli_ad(k['ad'])}_{len(k['gorseller']) + 1}.png"
+            with URETIM_KILIDI:
+                self.motor.gorsel_uret(istem, hedef, tohum=random.randint(0, 2**32 - 1))
+            k["gorseller"].append(str(hedef))
+            yeni.append(hedef)
+        if k["secili"] < 0:
+            k["secili"] = len(k["gorseller"]) - len(yeni)
+        proje.kaydet()
+        return yeni
+
+    def karakter_gorseli_yukle(self, proje: Proje, ad: str, dosya: str) -> Path:
+        k = proje.karakter(ad)
+        hedef = self._gorsel_kopyala(Path(dosya),
+                                     proje.dizin / f"karakter_{guvenli_ad(k['ad'])}_{len(k['gorseller']) + 1}.png")
+        k["gorseller"].append(str(hedef))
+        k["secili"] = len(k["gorseller"]) - 1
+        proje.kaydet()
+        return hedef
+
+    def karakter_gorseli_sec(self, proje: Proje, ad: str, gorsel: int) -> None:
+        k = proje.karakter(ad)
+        if not 0 <= gorsel <= len(k["gorseller"]):
+            raise ValueError(f"{k['ad']} için 0-{len(k['gorseller'])} arası görsel seçilebilir.")
+        k["secili"] = gorsel - 1
+        proje.kaydet()
+
+    # ---------- Flow tarzı hızlı üretim ----------
+    HIZLI_PROJE = "hizli-uretimler"
+
+    def istemden_video(self, istem: str, sure: float = 8.0, gorsel_once: bool = True,
+                       proje: Proje | None = None, aciklama: str = "") -> Sahne:
+        """Tek istemden: (isteğe bağlı) önce görsel üretir, sonra o görselden videoyu üretir.
+        Proje verilmezse 'Hızlı üretimler' projesine yeni sahne olarak eklenir."""
+        if proje is None:
+            try:
+                proje = Proje.yukle(self.HIZLI_PROJE)
+            except FileNotFoundError:
+                proje = Proje(ad=self.HIZLI_PROJE, baslik="Hızlı üretimler", fikir="Tek istemden üretilen klipler")
+                proje.kaydet()
+        sahne = self.sahne_ekle(proje, len(proje.sahneler), aciklama or istem[:80], istem, sure)
+        if gorsel_once:
+            self.gorsel_uret(proje, sahne.no, adet=1)
+        self.sahne_uret(proje, sahne.no)
         return sahne
 
     def tumunu_uret(self, proje: Proje, sadece_eksikler: bool = True, ilerleme=None) -> list[Path]:

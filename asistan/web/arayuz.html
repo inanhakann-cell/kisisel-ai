@@ -78,6 +78,23 @@ main{display:grid;grid-template-columns:minmax(320px,400px) 1fr;height:calc(100%
 .sahne .satir input{font-size:12px}
 .sahne .butonlar{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
 details summary{cursor:pointer;color:var(--muted);font-size:12px}
+.sahne img.onizleme{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#000}
+.kucukler{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.kucukler img{width:52px;height:30px;object-fit:cover;border-radius:4px;border:2px solid transparent;cursor:pointer;opacity:.75}
+.kucukler img.secili{border-color:var(--accent);opacity:1}
+.kucukler .yok{font-size:11px;padding:3px 6px;border-radius:4px;border:1px solid var(--line);cursor:pointer;color:var(--muted)}
+.kucukler .yok.secili{border-color:var(--accent);color:var(--text)}
+.hizli{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.hizli textarea{flex:1 1 320px;min-height:44px;height:44px}
+.hizli .sec{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hizli select{width:auto}
+.hizli label.kutu{display:flex;gap:6px;align-items:center;margin:0;color:var(--text);font-size:13px}
+.hizli label.kutu input{width:auto}
+.karakterler{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px}
+.karakter{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.karakter .resim{aspect-ratio:1/1;background:#000;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.karakter .resim img{width:100%;height:100%;object-fit:contain}
+.karakter .govde{padding:8px;display:flex;flex-direction:column;gap:6px;font-size:12px}
 .filmler{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-top:10px}
 .filmler video{width:100%;border-radius:8px;background:#000}
 .bolum-baslik{grid-column:1/-1;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin-top:6px;border-bottom:1px solid var(--line);padding-bottom:4px}
@@ -137,6 +154,15 @@ h3{font-size:14px;margin:18px 0 8px}
   </section>
 
   <section id="studyo">
+    <div class="kart hizli">
+      <textarea id="hzIstem" placeholder="İstemden video (Flow gibi): ör. anime girl with silver hair standing on a rooftop at sunset, wind in her hair"></textarea>
+      <div class="sec">
+        <select id="hzSure" title="Süre"><option value="5">5 sn</option><option value="8" selected>8 sn</option><option value="15">15 sn</option><option value="30">30 sn</option></select>
+        <label class="kutu" title="Önce görsel üret, video o görselden başlasın"><input type="checkbox" id="hzGorsel" checked> Önce görsel</label>
+        <label class="kutu" title="Seçili projeye sahne olarak ekle"><input type="checkbox" id="hzProje"> Bu projeye ekle</label>
+        <button class="ana" id="hzUret">✦ Üret</button>
+      </div>
+    </div>
     <div class="ust">
       <select id="projeSec"><option value="">Proje seç…</option></select>
       <button class="ana" id="yeniProjeBtn">+ Yeni video</button>
@@ -347,7 +373,8 @@ $("#yenileBtn").onclick = () => { projeListesi(); if(durum.projeAd) projeYukle(d
 function mesgulSahneler(){
   const set = new Set();
   for(const i of durum.isler) if(i.proje===durum.projeAd && (i.durum==="calisiyor"||i.durum==="bekliyor")){
-    const m = /Sahne (\d+)/.exec(i.baslik); if(m) set.add(+m[1]); else set.add("hepsi");
+    const m = /^Sahne (\d+)/.exec(i.baslik);
+    if(m) set.add(+m[1]); else if(i.baslik.startsWith("Sahneleri üret")) set.add("hepsi");
   }
   return set;
 }
@@ -378,20 +405,33 @@ function ciz(){
       <button id="montajBtn" ${uretilen<p.sahneler.length?"disabled title='Önce tüm sahneleri üret'":""}>🎬 Birleştir</button>
       <button id="youtubeBtn" ${p.filmler.length?"":"disabled title='Önce filmi birleştir'"}>▲ YouTube paketi</button>
     </div></div>`;
-  if(p.karakterler.length) html += `<details style="margin-bottom:10px"><summary>Karakterler (${p.karakterler.length})</summary>${p.karakterler.map(k=>`<div style="font-size:12px;margin-top:4px"><b>${esc(k.ad)}</b>: ${esc(k.tarif)}</div>`).join("")}</details>`;
+  html += `<details class="karakter-alani" ${durum.karakterAcik?"open":""} style="margin-bottom:12px"><summary>Karakterler (${p.karakterler.length}) — referans görselleri sahnelerde karakterin hep aynı görünmesini sağlar</summary>
+    <div class="karakterler" style="margin-top:10px">${p.karakterler.map((k,ki)=>{
+      const kurl = k.secili>=0 ? k.gorsel_urlleri[k.secili] : null;
+      const kMesgul = durum.isler.some(i=>i.proje===durum.projeAd && i.baslik===`${k.ad} referans görseli` && (i.durum==="calisiyor"||i.durum==="bekliyor"));
+      return `<div class="karakter" data-karakter="${esc(k.ad)}">
+        <div class="resim">${kurl?`<img src="${kurl}" alt="${esc(k.ad)}">`:(kMesgul?"Üretiliyor…":"Referans yok")}</div>
+        <div class="govde"><b>${esc(k.ad)}</b><span style="color:var(--muted)">${esc(k.tarif)}</span>
+          ${k.gorsel_urlleri.length>1?`<div class="kucukler">${k.gorsel_urlleri.map((u,i)=>`<img src="${u}" data-kgorsel="${i+1}" class="${i===k.secili?"secili":""}">`).join("")}</div>`:""}
+          <div class="butonlar"><button class="kucuk" data-keylem="uret" ${kMesgul?"disabled":""}>🖼 Referans üret</button><button class="kucuk" data-keylem="yukle" title="Kendi resmini yükle">⇪</button><button class="kucuk" data-keylem="duzenle" title="Tarifi düzenle">✎</button></div>
+        </div></div>`; }).join("")}
+      <div class="karakter" style="display:flex;align-items:center;justify-content:center;min-height:120px"><button id="karakterEkleBtn">+ Karakter</button></div>
+    </div></details>`;
   html += `<div class="sahneler">`;
   let sonBolum = null;
   for(const s of p.sahneler){
     if(s.bolum && s.bolum!==sonBolum){ html += `<div class="bolum-baslik">${esc(s.bolum)}</div>`; sonBolum = s.bolum; }
     const url = s.secili>=0 ? s.cekim_urlleri[s.secili] : null;
+    const gurl = s.secili_gorsel>=0 ? s.gorsel_urlleri[s.secili_gorsel] : null;
     const isMesgul = mesgul.has(s.no) || (mesgul.has("hepsi") && !s.cekimler.length);
     html += `<div class="sahne ${isMesgul?"mesgul":""}" data-no="${s.no}">
-      ${url ? `<video src="${url}" controls preload="metadata" playsinline></video>` : `<div class="bos">${isMesgul?"Üretiliyor…":"Henüz üretilmedi"}</div>`}
+      ${url ? `<video src="${url}" controls preload="metadata" playsinline ${gurl?`poster="${gurl}"`:""}></video>` : gurl ? `<img class="onizleme" src="${gurl}" alt="Başlangıç görseli">` : `<div class="bos">${isMesgul?"Üretiliyor…":"Henüz üretilmedi"}</div>`}
       <div class="govde">
         <div class="baslik"><span class="no">#${s.no}</span><span class="etiket ${s.sure>(p._azami||5)?"uzun":""}">${s.sure} sn</span>
           ${s.devam?`<span class="etiket">devam</span>`:""}${s.parca_istemleri.length?`<span class="etiket uzun">uzun çekim</span>`:""}
           ${isMesgul?`<span class="etiket" style="color:var(--warn)">çalışıyor</span>`:""}</div>
         <div style="font-size:13px">${esc(s.aciklama)}</div>
+        ${s.gorseller.length?`<div class="kucukler" title="Videonun başlayacağı görsel"><span style="font-size:11px;color:var(--muted)">Görsel:</span>${s.gorsel_urlleri.map((u,i)=>`<img src="${u}" data-gorsel="${i+1}" class="${i===s.secili_gorsel?"secili":""}" alt="Görsel ${i+1}">`).join("")}<span class="yok ${s.secili_gorsel<0?"secili":""}" data-gorsel="0" title="Görsel kullanma, metinden video">yok</span></div>`:""}
         ${s.cekimler.length>1?`<div class="cekimler">${s.cekimler.map((_,i)=>`<button data-sec="${i+1}" class="${i===s.secili?"secili":""}">Çekim ${i+1}</button>`).join("")}</div>`:""}
         <details><summary>Düzenle</summary>
           <label>Video istemi (İngilizce)</label><textarea data-alan="istem">${esc(s.istem)}</textarea>
@@ -402,8 +442,10 @@ function ciz(){
         </details>
         <div class="butonlar">
           <button class="kucuk" data-eylem="uret" ${isMesgul?"disabled":""}>${s.cekimler.length?"↻ Yeni çekim":"▶ Üret"}</button>
+          <button class="kucuk" data-eylem="gorsel" ${isMesgul?"disabled":""} title="Başlangıç görseli seçenekleri üret">🖼 Görsel</button>
           <button class="kucuk" data-eylem="uzat" ${isMesgul?"disabled":""}>⟿ Uzat</button>
-          <button class="kucuk" data-eylem="yukle" title="Bu sahneye hazır klip yükle">⇪</button>
+          <button class="kucuk" data-eylem="resim" title="Kendi resmini başlangıç karesi yap">⇪ Resim</button>
+          <button class="kucuk" data-eylem="yukle" title="Bu sahneye hazır klip yükle">⇪ Klip</button>
           <button class="kucuk" data-eylem="yukari" title="Öne al">↑</button>
           <button class="kucuk tehlike" data-eylem="sil" title="Sil">✕</button>
         </div>
@@ -449,8 +491,45 @@ function baglaProjeOlaylari(){
   document.querySelectorAll("[data-kopyala]").forEach(b => b.onclick = async () => {
     try{ await navigator.clipboard.writeText(b.dataset.kopyala); bildir("Kopyalandı"); }catch{ bildir("Kopyalanamadı", true); }
   });
+  const kAlan = document.querySelector(".karakter-alani");
+  if(kAlan) kAlan.ontoggle = () => durum.karakterAcik = kAlan.open;
+  $("#karakterEkleBtn").onclick = async () => {
+    const isim = prompt("Karakterin adı?"); if(!isim) return;
+    const tarif = prompt("Görünüşü (İngilizce daha iyi: yaş, saç, göz, kıyafet, renkler)?"); if(!tarif) return;
+    try{
+      durum.proje = await api(`/api/projeler/${enc}/karakterler`,{method:"POST",body:{ad:isim,tarif}}); durum.karakterAcik = true; ciz();
+      isBaslat(`/api/projeler/${enc}/karakterler/${encodeURIComponent(isim)}/gorsel`, {adet:2}, `${isim} için referans görselleri üretiliyor`);
+    }catch(e){ bildir(e.message,true); }
+  };
+  document.querySelectorAll(".karakter[data-karakter]").forEach(kk => {
+    const isim = kk.dataset.karakter, kenc = encodeURIComponent(isim);
+    kk.querySelectorAll("[data-kgorsel]").forEach(im => im.onclick = async () => {
+      durum.proje = await api(`/api/projeler/${enc}/karakterler/${kenc}/gorsel-sec`,{method:"POST",body:{gorsel:+im.dataset.kgorsel}}); ciz();
+    });
+    kk.querySelectorAll("[data-keylem]").forEach(b => b.onclick = async () => {
+      const e = b.dataset.keylem;
+      try{
+        if(e==="uret") isBaslat(`/api/projeler/${enc}/karakterler/${kenc}/gorsel`, {adet:2}, `${isim} için referans görselleri üretiliyor`);
+        else if(e==="duzenle"){
+          const k = durum.proje.karakterler.find(x=>x.ad===isim);
+          const tarif = prompt(`${isim} görünüşü:`, k ? k.tarif : ""); if(!tarif) return;
+          durum.proje = await api(`/api/projeler/${enc}/karakterler`,{method:"POST",body:{ad:isim,tarif}}); ciz();
+        }
+        else if(e==="yukle") dosyaSec(false, async ([d]) => {
+          const fd = new FormData(); fd.append("dosya", d);
+          try{ durum.proje = await api(`/api/projeler/${enc}/karakterler/${kenc}/gorsel-yukle`,{method:"POST",body:fd}); ciz(); bildir(`${isim} referans görseli eklendi`); }
+          catch(err){ bildir(err.message,true); }
+        }, "image/*");
+      }catch(err){ bildir(err.message,true); }
+    });
+  });
   document.querySelectorAll(".sahne").forEach(kart => {
     const no = +kart.dataset.no;
+    kart.querySelectorAll("[data-gorsel]").forEach(im => im.onclick = async () => {
+      try{ durum.proje = await api(`/api/projeler/${enc}/sahneler/${no}/gorsel-sec`,{method:"POST",body:{gorsel:+im.dataset.gorsel}}); ciz();
+           bildir(+im.dataset.gorsel ? "Video bu görselden başlayacak. ↻ ile yeni çekim üret." : "Görsel kaldırıldı; video metinden üretilecek."); }
+      catch(e){ bildir(e.message,true); }
+    });
     kart.querySelectorAll("[data-sec]").forEach(b => b.onclick = async () => {
       durum.proje = await api(`/api/projeler/${enc}/sahneler/${no}/sec`,{method:"POST",body:{cekim:+b.dataset.sec}}); ciz();
     });
@@ -458,7 +537,13 @@ function baglaProjeOlaylari(){
     kart.querySelectorAll("[data-eylem]").forEach(b => b.onclick = async () => {
       const e = b.dataset.eylem;
       try{
-        if(e==="yukle") dosyaSec(false, async ([d]) => {
+        if(e==="gorsel") isBaslat(`/api/projeler/${enc}/sahneler/${no}/gorsel`, {adet:2}, `Sahne ${no} için görseller üretiliyor`);
+        else if(e==="resim") dosyaSec(false, async ([d]) => {
+          const fd = new FormData(); fd.append("dosya", d);
+          try{ durum.proje = await api(`/api/projeler/${enc}/sahneler/${no}/gorsel-yukle`,{method:"POST",body:fd}); ciz(); bildir(`Sahne ${no} bu resimden başlayacak`); }
+          catch(err){ bildir(err.message,true); }
+        }, "image/*");
+        else if(e==="yukle") dosyaSec(false, async ([d]) => {
           const fd = new FormData(); fd.append("dosya", d); bildir("Klip yükleniyor…");
           try{ durum.proje = await api(`/api/projeler/${enc}/sahneler/${no}/ice-aktar`,{method:"POST",body:fd}); ciz(); bildir(`Sahne ${no} için yeni çekim eklendi`); }
           catch(err){ bildir(err.message,true); }
@@ -481,8 +566,8 @@ function baglaProjeOlaylari(){
   });
 }
 
-function dosyaSec(coklu, geri){
-  const g = Object.assign(document.createElement("input"), {type:"file", accept:"video/*", multiple:coklu});
+function dosyaSec(coklu, geri, kabul){
+  const g = Object.assign(document.createElement("input"), {type:"file", accept:kabul||"video/*", multiple:coklu});
   g.onchange = () => g.files.length && geri([...g.files]);
   g.click();
 }
@@ -494,6 +579,15 @@ async function isBaslat(yol, govde, mesaj){
     return is_;
   }catch(e){ bildir(e.message,true); }
 }
+
+/* Flow tarzı: istemden video */
+$("#hzUret").onclick = async () => {
+  const istem = $("#hzIstem").value.trim(); if(!istem){ bildir("Bir istem yaz", true); return; }
+  const govde = {istem, sure:+$("#hzSure").value, gorsel_once:$("#hzGorsel").checked};
+  if($("#hzProje").checked){ if(!durum.projeAd){ bildir("Önce bir proje seç", true); return; } govde.proje = durum.projeAd; }
+  const is_ = await isBaslat("/api/hizli", govde, $("#hzGorsel").checked ? "Önce görsel, sonra video üretiliyor…" : "Video üretiliyor…");
+  if(is_){ durum.hizliIs = is_.id; $("#hzIstem").value = ""; }
+};
 
 /* Yeni proje */
 $("#yeniProjeBtn").onclick = () => ac("#yeniProje");
@@ -557,7 +651,7 @@ async function islerYukle(){
     const bitti = i.durum==="bitti"||i.durum==="hata";
     if(bitti && onceki.get(i.id) && onceki.get(i.id)!==i.durum && i.kuyruk==="studyo"){
       if(i.durum==="hata") bildir(`${i.baslik}: ${i.hata}`, true); else bildir(`${i.baslik} tamamlandı`);
-      if(i.id===durum.yeniProjeIsi && i.sonuc && i.sonuc.proje){ durum.projeAd = i.sonuc.proje; localStorageYaz("proje", durum.projeAd); }
+      if((i.id===durum.yeniProjeIsi || i.id===durum.hizliIs) && i.sonuc && i.sonuc.proje){ durum.projeAd = i.sonuc.proje; localStorageYaz("proje", durum.projeAd); }
       projeDegisti = true;
     }
     if(i.proje===durum.projeAd && i.durum==="calisiyor") projeDegisti = true;

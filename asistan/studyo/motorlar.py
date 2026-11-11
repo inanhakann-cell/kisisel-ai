@@ -1,6 +1,7 @@
 """Video üretim motorları. Hepsi aynı arayüzü uygular:
 
-    motor.uret(istem, sure, hedef, baslangic_karesi=None, tohum=None) -> Path
+    motor.uret(istem, sure, hedef, baslangic_karesi=None, tohum=None) -> Path        (video)
+    motor.gorsel_uret(istem, hedef, tohum=None, referanslar=None) -> Path            (görsel)
 
 - TaslakMotor : GPU gerektirmez; sahne metniyle önizleme klibi üretir. Akışı denemek,
                 senaryoyu ve kurguyu kontrol etmek için.
@@ -36,6 +37,11 @@ class Motor:
              tohum: int | None = None) -> Path:
         raise NotImplementedError
 
+    def gorsel_uret(self, istem: str, hedef: Path, tohum: int | None = None,
+                    referanslar: list[Path] | None = None) -> Path:
+        """İstemden tek bir görsel (PNG) üretir. referanslar: karakter referans görselleri."""
+        raise NotImplementedError
+
 
 class TaslakMotor(Motor):
     ad = "taslak"
@@ -67,6 +73,30 @@ class TaslakMotor(Motor):
         return Path(hedef)
 
 
+    def gorsel_uret(self, istem, hedef, tohum=None, referanslar=None):
+        """Önizleme görseli: istemden türeyen renk + metin; referans varsa köşede küçük resmi."""
+        g, y = self.genislik, self.yukseklik
+        renk = "#" + hashlib.md5(f"{istem}{tohum}".encode()).hexdigest()[6:12]
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write("[GORSEL] " + _satirla(istem, 48))
+            metin_dosyasi = f.name
+        yazi = (f"drawtext=textfile='{filtre_yolu(metin_dosyasi)}'{yazi_tipi_secenegi()}:fontcolor=white:"
+                f"fontsize=h/24:line_spacing=8:box=1:boxcolor=black@0.45:boxborderw=16:"
+                f"x=(w-text_w)/2:y=(h-text_h)/2")
+        try:
+            girdiler = ["-f", "lavfi", "-i", f"color=c={renk}:s={g}x{y}:d=1"]
+            filtre = f"[0:v]vignette,noise=alls=10:allf=t,{yazi}[a]"
+            son = "[a]"
+            if referanslar:
+                girdiler += ["-i", str(referanslar[0])]
+                filtre += f";[1:v]scale=-2:{y // 4}[r];[a][r]overlay=W-w-{y // 30}:{y // 30}[b]"
+                son = "[b]"
+            ffmpeg(*girdiler, "-filter_complex", filtre, "-map", son, "-frames:v", "1", hedef)
+        finally:
+            Path(metin_dosyasi).unlink(missing_ok=True)
+        return Path(hedef)
+
+
 def _satirla(metin: str, genislik: int) -> str:
     kelimeler, satirlar, satir = metin.split(), [], ""
     for k in kelimeler:
@@ -90,8 +120,11 @@ class ComfyUIMotor(Motor):
     """
     ad = "comfyui"
 
-    def __init__(self, url=None, is_akisi=None, gorselden_is_akisi=None, bekleme_suresi=1800, **kw):
+    def __init__(self, url=None, is_akisi=None, gorselden_is_akisi=None, bekleme_suresi=1800,
+                 gorsel_is_akisi=None, referansli_gorsel_is_akisi=None, **kw):
         super().__init__(**kw)
+        self.gorsel_is_akisi = Path(gorsel_is_akisi or ayarlar.COMFYUI_GORSEL_IS_AKISI)
+        self.referansli_gorsel_is_akisi = Path(referansli_gorsel_is_akisi or ayarlar.COMFYUI_REFERANSLI_GORSEL_IS_AKISI)
         self.url = (url or ayarlar.COMFYUI_URL).rstrip("/")
         self.is_akisi = Path(is_akisi or ayarlar.COMFYUI_IS_AKISI)
         self.gorselden_is_akisi = Path(gorselden_is_akisi or ayarlar.COMFYUI_GORSELDEN_IS_AKISI)
@@ -129,7 +162,36 @@ class ComfyUIMotor(Motor):
         if baslangic_karesi:
             degerler["BASLANGIC_GORSELI"] = self._gorsel_yukle(Path(baslangic_karesi))
         is_akisi = self._sablon_doldur(dosya.read_text(encoding="utf-8"), degerler)
+        cikti = self._is_akisi_calistir(is_akisi, _video_ciktisi_bul, "video (SaveVideo / VHS_VideoCombine)")
+        return self._indir(cikti, Path(hedef))
 
+    def gorsel_uret(self, istem, hedef, tohum=None, referanslar=None):
+        referansli = bool(referanslar) and self.referansli_gorsel_is_akisi.exists()
+        dosya = self.referansli_gorsel_is_akisi if referansli else self.gorsel_is_akisi
+        if not dosya.exists():
+            raise FileNotFoundError(f"ComfyUI görsel iş akışı bulunamadı: {dosya} (bkz. is_akislari/README.md)")
+        degerler = {"ISTEM": istem, "NEGATIF": NEGATIF_ISTEM, "GENISLIK": self.genislik,
+                    "YUKSEKLIK": self.yukseklik,
+                    "TOHUM": tohum if tohum is not None else random.randint(0, 2**32 - 1)}
+        if referansli:
+            degerler["REFERANS_GORSELI"] = self._gorsel_yukle(Path(referanslar[0]))
+        is_akisi = self._sablon_doldur(dosya.read_text(encoding="utf-8"), degerler)
+        cikti = self._is_akisi_calistir(is_akisi, _gorsel_ciktisi_bul, "görsel (SaveImage)")
+        yanit = requests.get(f"{self.url}/view", params={
+            "filename": cikti["filename"], "subfolder": cikti.get("subfolder", ""),
+            "type": cikti.get("type", "output")}, timeout=300)
+        yanit.raise_for_status()
+        hedef = Path(hedef)
+        if Path(cikti["filename"]).suffix.lower() == ".png":
+            hedef.write_bytes(yanit.content)
+        else:
+            ham = hedef.with_suffix(Path(cikti["filename"]).suffix)
+            ham.write_bytes(yanit.content)
+            ffmpeg("-i", ham, "-frames:v", "1", hedef)
+            ham.unlink(missing_ok=True)
+        return hedef
+
+    def _is_akisi_calistir(self, is_akisi: dict, bulucu, beklenen: str) -> dict:
         yanit = requests.post(f"{self.url}/prompt", json={"prompt": is_akisi, "client_id": self.istemci_id},
                               timeout=60)
         if yanit.status_code != 200:
@@ -144,14 +206,14 @@ class ComfyUIMotor(Motor):
                 durum = kayit.get("status", {})
                 if durum.get("status_str") == "error":
                     raise RuntimeError(f"ComfyUI üretim hatası: {json.dumps(durum.get('messages'))[:1500]}")
-                cikti = _video_ciktisi_bul(kayit.get("outputs", {}))
+                cikti = bulucu(kayit.get("outputs", {}))
                 if cikti:
-                    return self._indir(cikti, Path(hedef))
+                    return cikti
                 if durum.get("completed"):
-                    raise RuntimeError("ComfyUI bitti ama video çıktısı bulunamadı. İş akışında "
-                                       "video kaydeden bir düğüm (SaveVideo / VHS_VideoCombine) olmalı.")
+                    raise RuntimeError(f"ComfyUI bitti ama çıktı bulunamadı. İş akışında {beklenen} "
+                                       f"kaydeden bir düğüm olmalı.")
             time.sleep(2)
-        raise TimeoutError(f"Video {self.bekleme_suresi} saniyede üretilmedi.")
+        raise TimeoutError(f"ComfyUI işi {self.bekleme_suresi} saniyede bitmedi.")
 
     def _indir(self, cikti: dict, hedef: Path) -> Path:
         yanit = requests.get(f"{self.url}/view", params={
@@ -173,6 +235,15 @@ def _video_ciktisi_bul(ciktilar: dict) -> dict | None:
                 if isinstance(oge, dict) and Path(oge.get("filename", "")).suffix.lower() in (
                         ".mp4", ".webm", ".mov", ".mkv", ".gif", ".webp"):
                     return oge
+    return None
+
+
+def _gorsel_ciktisi_bul(ciktilar: dict) -> dict | None:
+    for dugum in ciktilar.values():
+        for oge in dugum.get("images", []) or []:
+            if isinstance(oge, dict) and oge.get("type", "output") == "output" and Path(
+                    oge.get("filename", "")).suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"):
+                return oge
     return None
 
 

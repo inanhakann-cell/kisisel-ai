@@ -90,6 +90,20 @@ Ya da sohbette: *"Bir kedinin uzaya yolculuğu hakkında 4 sahnelik video yap"*,
 - YouTube paketi `cikti/projeler/<proje>/yayin/` klasörüne yazılır: `aciklama.txt`, `kapak.jpg`, `shorts_0.mp4`.
 - Plan ve yol haritası: [docs/VIDEO_STUDYOSU_PLANI.md](docs/VIDEO_STUDYOSU_PLANI.md)
 
+## İstemden görsel ve video (Flow gibi)
+
+Stüdyonun en üstündeki kutuya istemi yaz, **✦ Üret**: önce görsel üretilir, video o görselden başlar.
+Sonuçlar "Hızlı üretimler" projesinde toplanır (ya da **Bu projeye ekle** ile seçili projeye).
+Sohbette de olur: *"Şu istemi 8 saniyelik videoya çevir: …"*
+
+Projelerde her sahne kartında:
+- **🖼 Görsel**: 2 başlangıç görseli seçeneği üretir; küçük resme tıklayıp seç, **↻ Yeni çekim** ile o
+  görselden videoyu üret. **yok** seçilirse video doğrudan metinden üretilir.
+- **⇪ Resim**: kendi resmini (çizimin, Flow'dan bir kare…) başlangıç karesi yap.
+
+**Karakterler** bölümünde her karakter için referans görseli üret ya da yükle. Seçili referans,
+karakterin adı geçen sahnelerin görsellerine verilir; böylece karakter her sahnede aynı görünür.
+
 ## Flow (veya başka araç) projesini taşıma
 
 Flow'da başladığın bir projeye burada devam edebilirsin:
@@ -127,7 +141,8 @@ Flow'da kullandığın istemleri (prompt) de sahnelerin **Düzenle** bölümüne
 - [ ] Web arayüzü
 - [x] Video stüdyosu: senaryo, sahne üretimi (taslak / ComfyUI), çekimler, uzatma, montaj
 - [x] Tek uygulama (sohbet + stüdyo), uzun videolar, kesintisiz uzun çekim, seslendirme, YouTube paketi, Shorts
-- [ ] Karakter referans görselleri, otomatik kalite kontrolü, 1080p/4K büyütme (bkz. plan)
+- [x] İstemden görsel → görselden video (Flow gibi), sahne başlangıç görselleri, karakter referansları
+- [ ] Otomatik kalite kontrolü, 1080p/4K büyütme (bkz. plan)
 - [ ] Görsel üretme ve resim anlama (çok kipli model)
 - [ ] İnternette arama aracı
 

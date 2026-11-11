@@ -22,7 +22,9 @@ Hepsi kendi bilgisayarımızda (veya kiraladığımız GPU'da) açık modellerle
 | Seslendirme (TTS) | Sahne anlatımları Piper ile Türkçe okunur, sahne başına yerleşir, müzik kısılır | ✅ |
 | YouTube paketi | Başlık seçenekleri, açıklama, etiketler, hashtag, otomatik bölüm zaman damgaları | ✅ |
 | Kapak ve Shorts | 1280x720 kapak (Türkçe büyük harf metin), 1080x1920 dikey Shorts kesiti | ✅ |
-| Referans görseli ile karakter | Karakterin görselini (Flux/SDXL ile) bir kez üret, sahnelerde referans olarak kullan | ⏳ Aşama 3 |
+| İstemden görsel → video | Flow gibi: önce görsel, sonra o görselden video; tek kutudan ya da sohbetten | ✅ |
+| Sahne başlangıç görselleri | Her sahne için görsel seçenekleri üret ya da kendi resmini yükle, video ondan başlar | ✅ |
+| Referans görseli ile karakter | Karakter görselini üret/yükle; adı geçen sahnelerin görsellerine referans verilir | ✅ |
 | Kamera kontrolü | Kamera hareketi LoRA'ları (pan, zoom, orbit) | ⏳ Aşama 3 |
 | Ses efektleri / müzik üretimi | Sahneye uygun ses (MMAudio), müzik (MusicGen / ACE-Step) | ⏳ Aşama 3 |
 | Kalite artırma | Çözünürlük büyütme ve kare ara doldurma (RIFE) | ⏳ Aşama 3 |
@@ -69,13 +71,11 @@ Sohbet + stüdyo tek web uygulamasında, arka plan iş kuyruğu, uzun (dakikalar
 uzun çekim, Türkçe seslendirme, YouTube paketi, kapak, Shorts.
 
 **Aşama 3 — Flow kalitesine yaklaşmak**
-1. Karakter referans görselleri: her karakter için görsel üret, onayla, sahnelerin ilk karesi bununla
-   üretilsin (metinle tutarlılıktan çok daha güçlü).
-2. Uzun çekimde kayma (drift) önleme: renk eşleme, uzun video için özel modeller (FramePack,
+1. Uzun çekimde kayma (drift) önleme: renk eşleme, uzun video için özel modeller (FramePack,
    SkyReels-V2 gibi "sonsuz uzunluk" yaklaşımları) için iş akışları.
-3. Otomatik kalite kontrolü: görsel-dil modeli her klibi izleyip istemle uyumunu puanlar; kötüyse
+2. Otomatik kalite kontrolü: görsel-dil modeli her klibi izleyip istemle uyumunu puanlar; kötüyse
    farklı tohumla kendiliğinden yeniden üretir.
-4. 1080p/4K büyütme ve kare ara doldurma (RIFE), ses efektleri (MMAudio), müzik üretimi.
+3. 1080p/4K büyütme ve kare ara doldurma (RIFE), ses efektleri (MMAudio), müzik üretimi.
 
 **Aşama 3b — Kanal işleri**
 YouTube'a doğrudan yükleme (YouTube Data API, senin onayınla), yayın takvimi, kanal analitiğinden
