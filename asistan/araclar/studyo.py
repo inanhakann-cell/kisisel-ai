@@ -122,6 +122,54 @@ def klip_ice_aktar(proje: str, dosya: str, no: int = None, aciklama: str = "", i
     return f"Klip sahne {sahne.no} olarak eklendi ({sahne.sure:g} sn).\n{p.ozet()}"
 
 
+def istemden_video(istem: str, sure: float = 8, gorsel_once: bool = True, proje: str = None) -> str:
+    p = Proje.yukle(proje) if proje else None
+    sahne = _s().istemden_video(istem, float(sure), bool(gorsel_once), p)
+    gorsel = f"\nBaşlangıç görseli: {sahne.baslangic_gorseli}" if sahne.baslangic_gorseli else ""
+    return f"Video hazır ({sahne.sure:g} sn): {sahne.secili_klip}{gorsel}"
+
+
+def gorsel_uret(proje: str, no: int, adet: int = 2) -> str:
+    p = Proje.yukle(proje)
+    yollar = _s().gorsel_uret(p, int(no), int(adet))
+    s = p.sahne(int(no))
+    return (f"Sahne {no} için {len(yollar)} görsel üretildi (toplam {len(s.gorseller)}, seçili: "
+            f"{s.secili_gorsel + 1}).\n" + "\n".join(map(str, yollar)) +
+            "\nBeğendiğini gorsel_sec ile seç, sonra sahneyi_yeniden_uret ile videoya çevir.")
+
+
+def gorsel_sec(proje: str, no: int, gorsel: int) -> str:
+    p = Proje.yukle(proje)
+    _s().gorsel_sec(p, int(no), int(gorsel))
+    return f"Sahne {no}: " + (f"{gorsel}. görsel başlangıç karesi yapıldı." if gorsel else "görsel kaldırıldı.")
+
+
+def gorsel_yukle(proje: str, no: int, dosya: str) -> str:
+    p = Proje.yukle(proje)
+    return f"Sahne {no} başlangıç görseli: {_s().gorsel_yukle(p, int(no), dosya)}"
+
+
+def karakter_ekle(proje: str, ad: str, tarif: str, gorsel_uret: bool = True) -> str:
+    p = Proje.yukle(proje)
+    _s().karakter_ekle(p, ad, tarif)
+    if gorsel_uret:
+        yollar = _s().karakter_gorseli_uret(p, ad, 2)
+        return f"{ad} eklendi, 2 referans görseli üretildi (1. seçili):\n" + "\n".join(map(str, yollar))
+    return f"{ad} eklendi."
+
+
+def karakter_gorseli_uret(proje: str, ad: str, adet: int = 2) -> str:
+    p = Proje.yukle(proje)
+    yollar = _s().karakter_gorseli_uret(p, ad, int(adet))
+    return f"{ad} için {len(yollar)} referans görseli üretildi:\n" + "\n".join(map(str, yollar))
+
+
+def karakter_gorseli_sec(proje: str, ad: str, gorsel: int) -> str:
+    p = Proje.yukle(proje)
+    _s().karakter_gorseli_sec(p, ad, int(gorsel))
+    return f"{ad} için {gorsel}. görsel referans yapıldı."
+
+
 def _t(ad, aciklama, ozellikler, gerekli):
     return {"type": "function", "function": {"name": ad, "description": aciklama, "parameters": {
         "type": "object", "properties": ozellikler, "required": gerekli}}}
@@ -174,6 +222,24 @@ TANIMLAR = [
        "ekler. no verilirse o sahnenin yeni çekimi olur.", {"proje": _PROJE, "dosya": _S, "no": _NO,
        "aciklama": _S, "istem": {"type": "string", "description": "Klibin İngilizce istemi (biliniyorsa)"}},
        ["proje", "dosya"]),
+    _t("istemden_video", "Flow gibi: tek bir istemden önce görsel üretir, sonra o görseli videoya çevirir. "
+       "Kullanıcı 'şu istemi videoya çevir' dediğinde kullan. Proje verilmezse 'Hızlı üretimler' projesine eklenir.",
+       {"istem": {"type": "string", "description": "İngilizce, ayrıntılı görsel istem"}, "sure": _N,
+        "gorsel_once": {"type": "boolean", "description": "Önce görsel üretip ondan video yap (varsayılan evet)"},
+        "proje": _S}, ["istem"]),
+    _t("gorsel_uret", "Bir sahne için başlangıç görseli seçenekleri üretir; seçilen görsel videonun ilk karesi olur.",
+       {"proje": _PROJE, "no": _NO, "adet": {"type": "integer"}}, ["proje", "no"]),
+    _t("gorsel_sec", "Sahnenin başlangıç görselini seçer (1'den başlar; 0 = görsel kullanma).",
+       {"proje": _PROJE, "no": _NO, "gorsel": {"type": "integer"}}, ["proje", "no", "gorsel"]),
+    _t("gorsel_yukle", "Bilgisayardaki bir resmi sahnenin başlangıç karesi yapar.",
+       {"proje": _PROJE, "no": _NO, "dosya": _S}, ["proje", "no", "dosya"]),
+    _t("karakter_ekle", "Projeye karakter ekler (ya da tarifini günceller) ve referans görselleri üretir. Karakterin "
+       "her sahnede aynı görünmesi için kullan. Tarifi İngilizce ve ayrıntılı yaz (saç, göz, kıyafet, renkler).",
+       {"proje": _PROJE, "ad": _S, "tarif": _S, "gorsel_uret": _B}, ["proje", "ad", "tarif"]),
+    _t("karakter_gorseli_uret", "Karakter için yeni referans görselleri üretir.",
+       {"proje": _PROJE, "ad": _S, "adet": {"type": "integer"}}, ["proje", "ad"]),
+    _t("karakter_gorseli_sec", "Karakterin referans görselini seçer (1'den başlar).",
+       {"proje": _PROJE, "ad": _S, "gorsel": {"type": "integer"}}, ["proje", "ad", "gorsel"]),
     _t("shorts_kes", "Filmin belirli bir anından dikey (9:16) en fazla 59 sn'lik Shorts/Reels/TikTok kesiti üretir.",
        {"proje": _PROJE, "baslangic": _N, "uzunluk": _N, "baslik": _S}, ["proje"]),
 ]

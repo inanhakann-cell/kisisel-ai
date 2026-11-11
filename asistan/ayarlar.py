@@ -38,6 +38,10 @@ COMFYUI_URL = os.environ.get("COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
 COMFYUI_IS_AKISI = os.environ.get("COMFYUI_IS_AKISI", str(KOK / "is_akislari" / "metinden_video.json"))
 COMFYUI_GORSELDEN_IS_AKISI = os.environ.get(
     "COMFYUI_GORSELDEN_IS_AKISI", str(KOK / "is_akislari" / "gorselden_video.json"))
+COMFYUI_GORSEL_IS_AKISI = os.environ.get("COMFYUI_GORSEL_IS_AKISI", str(KOK / "is_akislari" / "gorsel.json"))
+# Karakter referans görseliyle görsel üretimi (IP-Adapter, Flux Kontext vb.). Yoksa sadece metin kullanılır.
+COMFYUI_REFERANSLI_GORSEL_IS_AKISI = os.environ.get(
+    "COMFYUI_REFERANSLI_GORSEL_IS_AKISI", str(KOK / "is_akislari" / "referansli_gorsel.json"))
 VIDEO_GENISLIK = int(os.environ.get("VIDEO_GENISLIK", "1280"))
 VIDEO_YUKSEKLIK = int(os.environ.get("VIDEO_YUKSEKLIK", "720"))
 VIDEO_FPS = int(os.environ.get("VIDEO_FPS", "24"))

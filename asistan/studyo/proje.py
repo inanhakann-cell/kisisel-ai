@@ -32,6 +32,14 @@ class Sahne:
     secili: int = -1              # montajda kullanılacak çekimin indeksi
     parca_istemleri: list[str] = field(default_factory=list)  # uzun çekimde sırayla olacaklar
     bolum: str = ""               # uzun videolarda ait olduğu bölüm (YouTube bölümleri için)
+    gorseller: list[str] = field(default_factory=list)  # sahne için üretilen/yüklenen başlangıç görselleri
+    secili_gorsel: int = -1       # videonun başlayacağı görsel (-1: görselsiz, metinden video)
+
+    @property
+    def baslangic_gorseli(self) -> Path | None:
+        if 0 <= self.secili_gorsel < len(self.gorseller):
+            return Path(self.gorseller[self.secili_gorsel])
+        return None
 
     @property
     def secili_klip(self) -> Path | None:
@@ -46,7 +54,7 @@ class Proje:
     baslik: str
     fikir: str = ""
     stil: str = ""
-    karakterler: list[dict] = field(default_factory=list)  # [{"ad": ..., "tarif": ...}]
+    karakterler: list[dict] = field(default_factory=list)  # [{"ad", "tarif", "gorseller": [...], "secili": -1}]
     sahneler: list[Sahne] = field(default_factory=list)
     filmler: list[str] = field(default_factory=list)
     bolumler: list[dict] = field(default_factory=list)   # [{"baslik", "ozet", "sure"}]
@@ -64,6 +72,14 @@ class Proje:
             if s.no == no:
                 return s
         raise KeyError(f"{no} numaralı sahne yok. Sahneler: {[s.no for s in self.sahneler]}")
+
+    def karakter(self, ad: str) -> dict:
+        for k in self.karakterler:
+            if k["ad"].lower() == ad.lower():
+                k.setdefault("gorseller", [])
+                k.setdefault("secili", -1)
+                return k
+        raise KeyError(f"'{ad}' adında karakter yok. Karakterler: {[k['ad'] for k in self.karakterler]}")
 
     def onceki(self, no: int) -> Sahne | None:
         i = self.sahneler.index(self.sahne(no))
