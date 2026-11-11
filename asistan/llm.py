@@ -9,11 +9,14 @@ class OllamaIstemci:
         self.url = url
         self.zaman_asimi = zaman_asimi
 
-    def sohbet(self, model: str, mesajlar: list[dict], araclar: list[dict] | None = None) -> dict:
+    def sohbet(self, model: str, mesajlar: list[dict], araclar: list[dict] | None = None,
+               bicim: str | None = None) -> dict:
         """Bir sohbet turu çalıştırır, asistanın mesajını (dict) döndürür."""
         govde = {"model": model, "messages": mesajlar, "stream": False}
         if araclar:
             govde["tools"] = araclar
+        if bicim:
+            govde["format"] = bicim  # ör. "json": model sadece geçerli JSON üretir
         yanit = requests.post(f"{self.url}/api/chat", json=govde, timeout=self.zaman_asimi)
         yanit.raise_for_status()
         return yanit.json()["message"]

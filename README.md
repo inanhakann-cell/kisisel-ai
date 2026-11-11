@@ -11,6 +11,7 @@ geri bildirimlerinden öğrenen kişisel asistan. Açık ağırlıklı modelleri
 | Sohbet / soru-cevap | Ana model (`SOHBET_MODELI`) |
 | Kod yazma | Kod uzmanı model (`KOD_MODELI`) yazar, `python_calistir` ile test eder, `dosya_yaz` ile `cikti/` klasörüne kaydeder |
 | Video düzenleme | FFmpeg: kesme, birleştirme, müzik ekleme, yazı ekleme, otomatik altyazı (Whisper) |
+| Video üretme (stüdyo) | Fikirden sahne sahne film: senaryo, sahne üretimi, yeniden çekim, uzatma, montaj |
 | Hafıza | `/hatirla` ile verdiğin bilgiler vektör hafızada tutulur, ilgili sorularda kullanılır |
 | Öğrenme | `/iyi` ve `/kotu <doğru cevap>` ile toplanan veriyle `egit.py` modeli LoRA ile ince ayarlar |
 
@@ -52,6 +53,25 @@ Sen: /kotu Doğru cevap şu olmalıydı: ...
 (`.env` içinde `KOD_ONAYI=0` ile kapatılabilir). `DOCKER_SANDBOX=1` ile kod Docker içinde,
 internetsiz çalışır; önerilen budur.
 
+## Video stüdyosu
+
+Bir fikri sahnelere bölüp her sahneyi yapay zeka ile üretir, sonra müzik ve altyazıyla birleştirir.
+
+```bash
+python studyo.py yeni "Küçük bir kedinin uzaya yolculuğu" --sahne 4 --stil "Pixar tarzı 3D animasyon"
+python studyo.py uret kucuk-bir-kedinin-uzay-yolculugu
+python studyo.py yeniden kucuk-bir-kedinin-uzay-yolculugu 2     # 2. sahneyi beğenmedin mi? yeni çekim
+python studyo.py uzat kucuk-bir-kedinin-uzay-yolculugu 4 "the cat waves at Earth"
+python studyo.py montaj kucuk-bir-kedinin-uzay-yolculugu --muzik muzik.mp3
+```
+
+Ya da sohbette: *"Bir kedinin uzaya yolculuğu hakkında 4 sahnelik video yap"*, sonra
+*"2. sahneyi gece yap"*, *"son sahneyi uzat"*, *"müzikle birleştir"*.
+
+- `VIDEO_MOTORU=taslak` (varsayılan): GPU gerekmez, önizleme klipleri üretir. Senaryoyu ve kurguyu denemek için.
+- `VIDEO_MOTORU=comfyui`: Gerçek üretim. ComfyUI ve bir video modeli gerekir, bkz. [is_akislari/README.md](is_akislari/README.md).
+- Plan ve yol haritası: [docs/VIDEO_STUDYOSU_PLANI.md](docs/VIDEO_STUDYOSU_PLANI.md)
+
 ## Kendi kendine öğrenme
 
 1. Kullanırken iyi cevaplara `/iyi`, kötülere `/kotu <doğrusu>` yaz. Bunlar
@@ -72,7 +92,8 @@ internetsiz çalışır; önerilen budur.
 
 - [x] Sohbet, araç çağıran ajan, kod çalıştırma, video düzenleme, hafıza, geri bildirim
 - [ ] Web arayüzü
-- [ ] Video **üretme** (ComfyUI + Wan / LTX-Video; 24 GB VRAM veya kiralık GPU)
+- [x] Video stüdyosu: senaryo, sahne üretimi (taslak / ComfyUI), çekimler, uzatma, montaj
+- [ ] Stüdyo web arayüzü, karakter referans görselleri, Türkçe seslendirme (bkz. plan)
 - [ ] Görsel üretme ve resim anlama (çok kipli model)
 - [ ] İnternette arama aracı
 
@@ -87,6 +108,7 @@ Testler Ollama gerektirmez (sahte model kullanır); video testleri için FFmpeg 
 
 ```
 main.py              komut satırı sohbet arayüzü
+studyo.py            video stüdyosu komut satırı aracı
 egit.py              LoRA ince ayar betiği
 asistan/
   ajan.py            ajan döngüsü (model ↔ araçlar)
@@ -95,5 +117,10 @@ asistan/
   geri_bildirim.py   eğitim verisi toplama
   araclar/kod.py     kod çalıştırma, dosya yazma
   araclar/video.py   FFmpeg video araçları
+  araclar/studyo.py  stüdyonun asistan araçları
+  medya.py           ortak FFmpeg yardımcıları
+  studyo/            senaryo, proje, motorlar (taslak/ComfyUI), montaj
+is_akislari/         ComfyUI iş akışları (Export API) ve kurulum rehberi
+docs/                planlar
 tests/               birim testleri
 ```

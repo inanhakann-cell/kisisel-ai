@@ -1,20 +1,11 @@
 """FFmpeg tabanlı video düzenleme araçları."""
 import json
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
 from .. import ayarlar
-
-
-def _ffmpeg(*argumanlar: str) -> None:
-    if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg kurulu değil.")
-    sonuc = subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *argumanlar],
-                           capture_output=True, text=True)
-    if sonuc.returncode != 0:
-        raise RuntimeError(sonuc.stderr.strip()[-2000:])
+from ..medya import ffmpeg as _ffmpeg, filtre_yolu, yazi_tipi_secenegi
 
 
 def _var_mi(yol: str) -> Path:
@@ -86,7 +77,7 @@ def yazi_ekle(video: str, metin: str, konum: str = "alt", cikti: str = "yazili.m
         metin_dosyasi = f.name
     try:
         _ffmpeg("-i", video, "-vf",
-                f"drawtext=textfile='{metin_dosyasi}':fontcolor=white:fontsize=h/18:"
+                f"drawtext=textfile='{filtre_yolu(metin_dosyasi)}'{yazi_tipi_secenegi()}:fontcolor=white:fontsize=h/18:"
                 f"box=1:boxcolor=black@0.5:boxborderw=10:x=(w-text_w)/2:y={y}",
                 "-c:a", "copy", str(hedef))
     finally:
@@ -112,7 +103,7 @@ def altyazi_olustur(video: str, dil: str = "tr", cikti: str = "altyazili.mp4") -
     srt.write_text("".join(f"{i}\n{zaman(p.start)} --> {zaman(p.end)}\n{p.text.strip()}\n\n"
                            for i, p in enumerate(parcalar, 1)), encoding="utf-8")
     hedef = _cikti(cikti)
-    _ffmpeg("-i", video, "-vf", f"subtitles='{srt}'", "-c:a", "copy", str(hedef))
+    _ffmpeg("-i", video, "-vf", f"subtitles='{filtre_yolu(srt)}'", "-c:a", "copy", str(hedef))
     return f"Kaydedildi: {hedef} (altyazı dosyası: {srt})"
 
 

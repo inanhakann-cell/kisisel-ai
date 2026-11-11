@@ -1,11 +1,11 @@
 """Asistanın kullanabildiği araçlar ve kayıt defteri."""
-from . import kod, video
+from . import kod, studyo, video
 
 # Ollama'ya gönderilen araç tanımları
-TANIMLAR: list[dict] = [*kod.TANIMLAR, *video.TANIMLAR]
+TANIMLAR: list[dict] = [*kod.TANIMLAR, *video.TANIMLAR, *studyo.TANIMLAR]
 
 # Araç adı -> Python fonksiyonu
-FONKSIYONLAR = {**kod.FONKSIYONLAR, **video.FONKSIYONLAR}
+FONKSIYONLAR = {**kod.FONKSIYONLAR, **video.FONKSIYONLAR, **studyo.FONKSIYONLAR}
 
 
 def calistir(ad: str, argumanlar: dict) -> str:

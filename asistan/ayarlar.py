@@ -30,3 +30,16 @@ VERI_DIZINI = Path(os.environ.get("VERI_DIZINI", KOK / "veri"))
 CIKTI_DIZINI = Path(os.environ.get("CIKTI_DIZINI", KOK / "cikti"))
 VERI_DIZINI.mkdir(parents=True, exist_ok=True)
 CIKTI_DIZINI.mkdir(parents=True, exist_ok=True)
+
+# --- Video stüdyosu ---
+# taslak: GPU gerektirmeyen önizleme klipleri · comfyui: gerçek video üretim modeli
+VIDEO_MOTORU = os.environ.get("VIDEO_MOTORU", "taslak")
+COMFYUI_URL = os.environ.get("COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
+COMFYUI_IS_AKISI = os.environ.get("COMFYUI_IS_AKISI", str(KOK / "is_akislari" / "metinden_video.json"))
+COMFYUI_GORSELDEN_IS_AKISI = os.environ.get(
+    "COMFYUI_GORSELDEN_IS_AKISI", str(KOK / "is_akislari" / "gorselden_video.json"))
+VIDEO_GENISLIK = int(os.environ.get("VIDEO_GENISLIK", "1280"))
+VIDEO_YUKSEKLIK = int(os.environ.get("VIDEO_YUKSEKLIK", "720"))
+VIDEO_FPS = int(os.environ.get("VIDEO_FPS", "24"))
+# Yazı tipi dosyası (Türkçe karakterli). Boşsa sistemde uygun olan aranır.
+YAZI_TIPI = os.environ.get("YAZI_TIPI", "")
