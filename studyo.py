@@ -11,6 +11,7 @@
   python studyo.py sec <proje> 2 1              # 2. sahnede 1. çekimi kullan
   python studyo.py montaj <proje> --muzik muzik.mp3
   python studyo.py hepsi "fikir" --muzik muzik.mp3   # senaryo + üretim + montaj tek seferde
+  python studyo.py senaryo senaryolar/ugly-cute-aliens/bolum3.json   # hazır senaryo dosyasından proje
 
 Motor seçimi: --motor taslak|comfyui (varsayılan .env içindeki VIDEO_MOTORU)
 """
@@ -30,6 +31,7 @@ def main(argv=None) -> None:
     a = alt.add_parser("yeni"); a.add_argument("fikir"); a.add_argument("--sahne", type=int, default=5)
     a.add_argument("--stil", default="sinematik"); a.add_argument("--ad")
     alt.add_parser("listele")
+    a = alt.add_parser("senaryo"); a.add_argument("dosya")
     a = alt.add_parser("durum"); a.add_argument("proje")
     a = alt.add_parser("uret"); a.add_argument("proje"); a.add_argument("--hepsi", action="store_true")
     a = alt.add_parser("duzenle"); a.add_argument("proje"); a.add_argument("no", type=int)
@@ -49,6 +51,9 @@ def main(argv=None) -> None:
     st = Studyo(motor=motor_al(x.motor))
     print(f"[motor: {st.motor.ad}]")
 
+    if x.komut == "senaryo":
+        print(st.senaryo_dosyasindan(x.dosya).ozet())
+        return
     if x.komut == "listele":
         print("\n".join(Studyo.projeler()) or "Henüz proje yok.")
         return
