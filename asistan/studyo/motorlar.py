@@ -24,8 +24,10 @@ from .senaryo import NEGATIF_ISTEM
 
 class Motor:
     ad = "temel"
+    varsayilan_azami_sure = None  # None: ayarlar.MOTOR_AZAMI_SURE
 
-    def __init__(self, genislik=None, yukseklik=None, fps=None):
+    def __init__(self, genislik=None, yukseklik=None, fps=None, azami_sure=None):
+        self.azami_sure = float(azami_sure or self.varsayilan_azami_sure or ayarlar.MOTOR_AZAMI_SURE)
         self.genislik = genislik or ayarlar.VIDEO_GENISLIK
         self.yukseklik = yukseklik or ayarlar.VIDEO_YUKSEKLIK
         self.fps = fps or ayarlar.VIDEO_FPS
@@ -37,6 +39,7 @@ class Motor:
 
 class TaslakMotor(Motor):
     ad = "taslak"
+    varsayilan_azami_sure = 10.0
 
     def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None):
         g, y, fps = self.genislik, self.yukseklik, self.fps

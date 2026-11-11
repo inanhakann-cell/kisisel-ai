@@ -1,7 +1,8 @@
-# Kişisel Yapay Zeka Asistanı
+# Kişisel Yapay Zeka Asistanı + Video Stüdyosu
 
-Kendi bilgisayarında çalışan; sohbet eden, kod yazıp çalıştıran, video düzenleyen ve
-geri bildirimlerinden öğrenen kişisel asistan. Açık ağırlıklı modelleri (Qwen vb.)
+Kendi bilgisayarında çalışan; sohbet eden, kod yazıp çalıştıran, video düzenleyen, sahne sahne
+dakikalarca süren videolar üreten ve geri bildirimlerinden öğrenen kişisel asistan. Sohbet ve stüdyo
+**tek uygulamada**: solda asistanla konuşursun, sağda videonun sahnelerini izleyip düzenlersin. Açık ağırlıklı modelleri (Qwen vb.)
 [Ollama](https://ollama.com) üzerinden kullanır; hiçbir verin dışarı gitmez.
 
 ## Neler yapabilir?
@@ -12,6 +13,9 @@ geri bildirimlerinden öğrenen kişisel asistan. Açık ağırlıklı modelleri
 | Kod yazma | Kod uzmanı model (`KOD_MODELI`) yazar, `python_calistir` ile test eder, `dosya_yaz` ile `cikti/` klasörüne kaydeder |
 | Video düzenleme | FFmpeg: kesme, birleştirme, müzik ekleme, yazı ekleme, otomatik altyazı (Whisper) |
 | Video üretme (stüdyo) | Fikirden sahne sahne film: senaryo, sahne üretimi, yeniden çekim, uzatma, montaj |
+| Uzun videolar | Hedef dakika ver (ör. 10 dk): bölümlü senaryo, sahneler, seslendirme, müzik |
+| Tek kesintisiz çekim | 30 sn, 2 dk… model sınırından uzun sahneler otomatik zincirlenip tek klip olur |
+| Kanal büyütme | YouTube başlıkları, açıklama, etiketler, bölüm zaman damgaları, kapak görseli, dikey Shorts |
 | Hafıza | `/hatirla` ile verdiğin bilgiler vektör hafızada tutulur, ilgili sorularda kullanılır |
 | Öğrenme | `/iyi` ve `/kotu <doğru cevap>` ile toplanan veriyle `egit.py` modeli LoRA ile ince ayarlar |
 
@@ -36,8 +40,11 @@ geri bildirimlerinden öğrenen kişisel asistan. Açık ağırlıklı modelleri
    ```
 5. Çalıştır:
    ```bash
-   python main.py
+   python uygulama.py
    ```
+   Tarayıcıda **http://127.0.0.1:8000** açılır: solda sohbet, sağda stüdyo. Telefonda da çalışır
+   (`python uygulama.py --host 0.0.0.0` ile aynı Wi-Fi'deki telefondan bilgisayarın IP'siyle aç).
+   Sadece terminal istersen: `python main.py` (sohbet) ve `python studyo.py` (stüdyo).
 
 ## Örnek kullanım
 
@@ -55,7 +62,14 @@ internetsiz çalışır; önerilen budur.
 
 ## Video stüdyosu
 
-Bir fikri sahnelere bölüp her sahneyi yapay zeka ile üretir, sonra müzik ve altyazıyla birleştirir.
+Bir fikri sahnelere bölüp her sahneyi yapay zeka ile üretir, sonra seslendirme, müzik ve altyazıyla
+birleştirir. En kolayı uygulamadan (**+ Yeni video**) ya da sohbetten:
+
+- *"Antik Roma'da bir gün hakkında 8 dakikalık belgesel yap"* → bölümlü senaryo, sonra *"sahneleri üret"*
+- *"3. sahneden sonra pazarın içinden geçen 45 saniyelik tek çekim ekle"*
+- *"müzikle birleştir ve YouTube paketini hazırla"*
+
+Komut satırından da kullanılabilir:
 
 ```bash
 python studyo.py yeni "Küçük bir kedinin uzaya yolculuğu" --sahne 4 --stil "Pixar tarzı 3D animasyon"
@@ -70,6 +84,10 @@ Ya da sohbette: *"Bir kedinin uzaya yolculuğu hakkında 4 sahnelik video yap"*,
 
 - `VIDEO_MOTORU=taslak` (varsayılan): GPU gerekmez, önizleme klipleri üretir. Senaryoyu ve kurguyu denemek için.
 - `VIDEO_MOTORU=comfyui`: Gerçek üretim. ComfyUI ve bir video modeli gerekir, bkz. [is_akislari/README.md](is_akislari/README.md).
+- `MOTOR_AZAMI_SURE`: modelin tek seferde ürettiği en uzun klip (Wan/LTX için ~5). Bundan uzun her sahne
+  parçalara bölünür, her parça öncekinin son karesinden devam eder ve tek kesintisiz klip olarak birleşir.
+- Seslendirme: `pip install piper-tts` + Türkçe ses modeli, `.env` içinde `PIPER_MODELI` (bkz. `asistan/studyo/ses.py`).
+- YouTube paketi `cikti/projeler/<proje>/yayin/` klasörüne yazılır: `aciklama.txt`, `kapak.jpg`, `shorts_0.mp4`.
 - Plan ve yol haritası: [docs/VIDEO_STUDYOSU_PLANI.md](docs/VIDEO_STUDYOSU_PLANI.md)
 
 ## Kendi kendine öğrenme
@@ -93,13 +111,15 @@ Ya da sohbette: *"Bir kedinin uzaya yolculuğu hakkında 4 sahnelik video yap"*,
 - [x] Sohbet, araç çağıran ajan, kod çalıştırma, video düzenleme, hafıza, geri bildirim
 - [ ] Web arayüzü
 - [x] Video stüdyosu: senaryo, sahne üretimi (taslak / ComfyUI), çekimler, uzatma, montaj
-- [ ] Stüdyo web arayüzü, karakter referans görselleri, Türkçe seslendirme (bkz. plan)
+- [x] Tek uygulama (sohbet + stüdyo), uzun videolar, kesintisiz uzun çekim, seslendirme, YouTube paketi, Shorts
+- [ ] Karakter referans görselleri, otomatik kalite kontrolü, 1080p/4K büyütme (bkz. plan)
 - [ ] Görsel üretme ve resim anlama (çok kipli model)
 - [ ] İnternette arama aracı
 
 ## Testler
 
 ```bash
+pip install -r requirements-dev.txt
 python -m unittest discover -s tests -t . -v
 ```
 Testler Ollama gerektirmez (sahte model kullanır); video testleri için FFmpeg gerekir.
@@ -107,6 +127,7 @@ Testler Ollama gerektirmez (sahte model kullanır); video testleri için FFmpeg 
 ## Proje yapısı
 
 ```
+uygulama.py          tek uygulama: sohbet + stüdyo (tarayıcıda)
 main.py              komut satırı sohbet arayüzü
 studyo.py            video stüdyosu komut satırı aracı
 egit.py              LoRA ince ayar betiği
@@ -119,7 +140,8 @@ asistan/
   araclar/video.py   FFmpeg video araçları
   araclar/studyo.py  stüdyonun asistan araçları
   medya.py           ortak FFmpeg yardımcıları
-  studyo/            senaryo, proje, motorlar (taslak/ComfyUI), montaj
+  studyo/            senaryo, proje, motorlar (taslak/ComfyUI), montaj, ses, yayin (YouTube)
+  web/               FastAPI sunucusu, arka plan işleri, arayüz (arayuz.html)
 is_akislari/         ComfyUI iş akışları (Export API) ve kurulum rehberi
 docs/                planlar
 tests/               birim testleri

@@ -1,7 +1,7 @@
 """Proje ve sahne veri modeli. Her proje cikti/projeler/<ad>/proje.json içinde saklanır."""
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 from .. import ayarlar
@@ -30,6 +30,8 @@ class Sahne:
     seslendirme: str = ""         # altyazı / anlatım metni
     cekimler: list[str] = field(default_factory=list)  # üretilen klip dosyaları (sürümler)
     secili: int = -1              # montajda kullanılacak çekimin indeksi
+    parca_istemleri: list[str] = field(default_factory=list)  # uzun çekimde sırayla olacaklar
+    bolum: str = ""               # uzun videolarda ait olduğu bölüm (YouTube bölümleri için)
 
     @property
     def secili_klip(self) -> Path | None:
@@ -47,6 +49,9 @@ class Proje:
     karakterler: list[dict] = field(default_factory=list)  # [{"ad": ..., "tarif": ...}]
     sahneler: list[Sahne] = field(default_factory=list)
     filmler: list[str] = field(default_factory=list)
+    bolumler: list[dict] = field(default_factory=list)   # [{"baslik", "ozet", "sure"}]
+    son_montaj: dict = field(default_factory=dict)       # {"film", "sahne_baslangiclari", "sure"}
+    yayin: dict = field(default_factory=dict)            # YouTube paketi
 
     @property
     def dizin(self) -> Path:
@@ -80,11 +85,20 @@ class Proje:
             mevcut = [p.name for p in projeler_dizini().iterdir() if (p / "proje.json").exists()]
             raise FileNotFoundError(f"'{ad}' projesi yok. Mevcut projeler: {mevcut}")
         veri = json.loads(dosya.read_text(encoding="utf-8"))
-        veri["sahneler"] = [Sahne(**s) for s in veri.get("sahneler", [])]
-        return cls(**veri)
+        sahne_alanlari = {f.name for f in fields(Sahne)}
+        veri["sahneler"] = [Sahne(**{k: v for k, v in s.items() if k in sahne_alanlari})
+                            for s in veri.get("sahneler", [])]
+        proje_alanlari = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in veri.items() if k in proje_alanlari})
+
+    @property
+    def toplam_sure(self) -> float:
+        return sum(s.sure for s in self.sahneler)
 
     def ozet(self) -> str:
-        satirlar = [f"Proje: {self.ad} — {self.baslik} ({len(self.sahneler)} sahne, stil: {self.stil})"]
+        dk, sn = divmod(int(self.toplam_sure), 60)
+        satirlar = [f"Proje: {self.ad} — {self.baslik} ({len(self.sahneler)} sahne, ~{dk} dk {sn} sn, "
+                    f"stil: {self.stil})"]
         for s in self.sahneler:
             durum = f"{len(s.cekimler)} çekim" if s.cekimler else "üretilmedi"
             satirlar.append(f"  {s.no}. [{s.sure:g} sn, {durum}{', devam' if s.devam else ''}] {s.aciklama}")
