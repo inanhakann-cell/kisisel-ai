@@ -34,7 +34,8 @@ class Motor:
         self.fps = fps or ayarlar.VIDEO_FPS
 
     def uret(self, istem: str, sure: float, hedef: Path, baslangic_karesi: Path | None = None,
-             tohum: int | None = None) -> Path:
+             tohum: int | None = None, etiket: str | None = None) -> Path:
+        """etiket: insanların okuyacağı kısa sahne adı (yalnızca önizleme motoru ekrana yazar)."""
         raise NotImplementedError
 
     def gorsel_uret(self, istem: str, hedef: Path, tohum: int | None = None,
@@ -47,27 +48,30 @@ class TaslakMotor(Motor):
     ad = "taslak"
     varsayilan_azami_sure = 10.0
 
-    def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None):
+    def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None, etiket=None):
         g, y, fps = self.genislik, self.yukseklik, self.fps
         kare = max(int(sure * fps), 1)
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
-            f.write(_satirla(istem, 48))
+            f.write(_satirla(etiket, 34) if etiket else _satirla(istem, 48))
             metin_dosyasi = f.name
+        boyut = "h/16" if etiket else "h/24"
         yazi = (f"drawtext=textfile='{filtre_yolu(metin_dosyasi)}'{yazi_tipi_secenegi()}:fontcolor=white:"
-                f"fontsize=h/24:line_spacing=8:box=1:boxcolor=black@0.45:boxborderw=16:"
-                f"x=(w-text_w)/2:y=(h-text_h)/2")
+                f"fontsize={boyut}:line_spacing=10:box=1:boxcolor=black@0.5:boxborderw=20:"
+                f"x=(w-text_w)/2:y=(h-text_h)/2,"
+                f"drawtext=text='TASLAK'{yazi_tipi_secenegi()}:"
+                f"fontcolor=white@0.6:fontsize=h/30:x=w-text_w-h/30:y=h/30")
         try:
             if baslangic_karesi:
                 # Devam sahnesi: önceki kareden (bulanıklaştırılmış) yavaş yakınlaşma
                 ffmpeg("-loop", "1", "-i", baslangic_karesi, "-vf",
                        f"scale={g * 2}:{y * 2},boxblur=20:2,eq=brightness=-0.08,zoompan=z='min(zoom+0.0012,1.25)':d={kare}:"
                        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={g}x{y}:fps={fps},{yazi},format=yuv420p",
-                       "-frames:v", kare, "-c:v", "libx264", hedef)
+                       "-frames:v", kare, "-c:v", "libx264", "-crf", "28", hedef)
             else:
                 renk = "#" + hashlib.md5(f"{istem}{tohum}".encode()).hexdigest()[:6]
                 ffmpeg("-f", "lavfi", "-i", f"color=c={renk}:s={g}x{y}:r={fps}:d={sure}", "-vf",
-                       f"vignette,noise=alls=12:allf=t,{yazi},format=yuv420p",
-                       "-frames:v", kare, "-c:v", "libx264", hedef)
+                       f"vignette,{yazi},format=yuv420p",
+                       "-frames:v", kare, "-c:v", "libx264", "-crf", "28", hedef)
         finally:
             Path(metin_dosyasi).unlink(missing_ok=True)
         return Path(hedef)
@@ -152,7 +156,7 @@ class ComfyUIMotor(Motor):
         veri = yanit.json()
         return f"{veri['subfolder']}/{veri['name']}" if veri.get("subfolder") else veri["name"]
 
-    def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None):
+    def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None, etiket=None):
         dosya = self.gorselden_is_akisi if baslangic_karesi else self.is_akisi
         if not dosya.exists():
             raise FileNotFoundError(f"ComfyUI iş akışı bulunamadı: {dosya} (bkz. is_akislari/README.md)")
