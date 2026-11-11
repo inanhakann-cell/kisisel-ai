@@ -356,8 +356,10 @@ class Studyo:
         except json.JSONDecodeError as e:
             raise ValueError(f"Senaryo dosyası geçerli JSON değil: {e}")
         sahne_alanlari = {"aciklama", "istem", "sure", "kamera", "devam", "seslendirme", "bolum", "parca_istemleri"}
-        sahneler = []
+        sahneler, baslangic_gorselleri = [], {}
         for i, sh in enumerate(veri.get("sahneler") or [], 1):
+            if sh.get("baslangic_gorseli"):
+                baslangic_gorselleri[i] = yol.parent / sh["baslangic_gorseli"]
             sh = {k: v for k, v in sh.items() if k in sahne_alanlari}
             if not (sh.get("istem") or sh.get("aciklama")):
                 raise ValueError(f"{i}. sahnede istem ya da açıklama yok.")
@@ -377,6 +379,13 @@ class Studyo:
         proje.sahneler = sahneler
         proje.bolumler = list(veri.get("bolumler") or [])
         proje.kaydet()
+        # Dosyada belirtilen görseller (JSON'a göre göreli yol): karakter referansları ve başlangıç kareleri
+        for k in veri.get("karakterler") or []:
+            if k.get("gorsel") and (yol.parent / k["gorsel"]).is_file():
+                self.karakter_gorseli_yukle(proje, k["ad"], str(yol.parent / k["gorsel"]))
+        for no, gorsel in baslangic_gorselleri.items():
+            if gorsel.is_file():
+                self.gorsel_yukle(proje, no, str(gorsel))
         return proje
 
     def cekim_sec(self, proje: Proje, no: int, cekim: int) -> None:
@@ -507,9 +516,12 @@ class Studyo:
         self.ilerleme("YouTube paketi hazırlanıyor")
         return youtube_paketi(proje, self.model_cagir, shorts)
 
-    def shorts(self, proje: Proje, baslangic: float = 0, uzunluk: float = 59, baslik: str = "") -> Path:
+    def shorts(self, proje: Proje, baslangic: float = 0, uzunluk: float = 59, baslik: str = "",
+               parcalar: list | None = None, cerceve: str = "bulanik", film: str | None = None,
+               ad: str | None = None) -> Path:
         from .yayin import shorts_olustur
-        return shorts_olustur(proje, baslangic, uzunluk, baslik=baslik)
+        return shorts_olustur(proje, baslangic, uzunluk, film=film, baslik=baslik, parcalar=parcalar,
+                              cerceve=cerceve, ad=ad)
 
     @staticmethod
     def projeler() -> list[str]:

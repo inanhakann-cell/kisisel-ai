@@ -5,23 +5,28 @@
   "karakterler": [
     {
       "ad": "Pof",
-      "tarif": "small alien, hairless, wrinkled gray-green skin, oversized head, tiny round glasses, huge glossy eyes, ugly-cute, 3D cartoon style"
+      "tarif": "small skinny gray alien with an oversized bumpy wrinkled bald head, tiny round wire glasses, huge glossy dark eyes, ragged stitched burlap vest, ugly-cute, 3D cartoon style",
+      "gorsel": "gorseller/karakterler/Pof.png"
     },
     {
       "ad": "Tit",
-      "tarif": "tiny alien, fully covered in soft cream-peach fur, eyes taking half of the face, trembling pose, ugly-cute, 3D cartoon style"
+      "tarif": "tiny round alien fully covered in fluffy cream-peach fur, two short antennae with peach tips, huge round eyes taking half of the face, small arms, ugly-cute, 3D cartoon style",
+      "gorsel": "gorseller/karakterler/Tit.png"
     },
     {
       "ad": "Lila",
-      "tarif": "glamorous pretty alien girl, compact proportions, smooth lavender-purple skin, two curled head tendrils, very long curled eyelashes, big sparkling eyes, full glossy pink lips, soft hourglass silhouette, fitted scrap-fabric top fully covering chest, patched fluffy mini skirt, small boots, pink ribbon scarf, tasteful and cute, 3D cartoon style"
+      "tarif": "pretty compact alien girl with smooth lavender-purple skin, two big curled head tendrils, long curled eyelashes, big sparkling eyes, full glossy pink lips, gray patched scrap-fabric top fully covering chest, fluffy patched mini skirt, pink ribbon scarf, small boots, tasteful and cute, 3D cartoon style",
+      "gorsel": "gorseller/karakterler/Lila.png"
     },
     {
       "ad": "Grum",
-      "tarif": "small alien, half furry half bald, one eye bigger than the other, cape made from a sock, grumpy villain pose, ugly-cute, 3D cartoon style"
+      "tarif": "small villain alien, one half covered in shaggy purple fur and the other half bald pink skin, one eye bigger than the other, bushy dark eyebrows, toothy grin, red-and-white striped sock worn as a cape, ugly-cute, 3D cartoon style",
+      "gorsel": "gorseller/karakterler/Grum.png"
     },
     {
       "ad": "Bubu",
-      "tarif": "small rubbery alien, stretchy body, oversized wide mouth, mismatched eyes, goofy expression, ugly-cute, 3D cartoon style"
+      "tarif": "small rubbery frog-like alien, lime-green body with orange belly, orange hands and feet, two thin antennae with orange tips, huge bulging round eyes, very wide mouth, stretchy limbs, goofy expression, ugly-cute, 3D cartoon style",
+      "gorsel": "gorseller/karakterler/Bubu.png"
     },
     {
       "ad": "Kedi",

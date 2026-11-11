@@ -82,32 +82,72 @@ def kapak_olustur(proje: Proje, metin: str = "", sahne_no: int | None = None, an
 
 
 def shorts_olustur(proje: Proje, baslangic: float = 0.0, uzunluk: float = 59.0, film: str | None = None,
-                   baslik: str = "") -> Path:
-    """Filmden dikey (1080x1920) Shorts kesiti: arkada bulanık dolgu, ortada video, üstte başlık."""
+                   baslik: str = "", parcalar: list | None = None, cerceve: str = "bulanik",
+                   ad: str | None = None) -> Path:
+    """Filmden dikey (1080x1920) Shorts üretir.
+
+    parcalar: [(başlangıç, bitiş), ...] verilirse bu aralıklar sırayla birleştirilir (ör. bir esprinin
+    kurulumu + sonu); verilmezse baslangic..baslangic+uzunluk kullanılır. Toplam en fazla 59 sn.
+    cerceve: "bulanik" (tüm kare görünür, arkada bulanık dolgu) ya da "kirp" (ortadan kırpıp ekranı doldur)."""
     film = film or proje.son_montaj.get("film") or (proje.filmler[-1] if proje.filmler else None)
     if not film or not Path(film).exists():
         raise RuntimeError("Shorts için önce montaj yapılmalı (filmi_birlestir).")
-    uzunluk = min(float(uzunluk), 59.0, max(sure(film) - baslangic, 1))
+    film_suresi = sure(film)
+    if not parcalar:
+        parcalar = [(baslangic, baslangic + min(float(uzunluk), 59.0))]
+    temiz, toplam = [], 0.0
+    for bas, son in parcalar:
+        bas, son = max(0.0, float(bas)), min(float(son), film_suresi)
+        if son - bas < 0.3:
+            raise ValueError(f"Geçersiz Shorts aralığı: {bas:g}-{son:g} sn (film {film_suresi:.1f} sn)")
+        son = min(son, bas + 59.0 - toplam)
+        if son - bas >= 0.3:
+            temiz.append((bas, son))
+            toplam += son - bas
+        if toplam >= 59.0:
+            break
+    if cerceve not in ("bulanik", "kirp"):
+        raise ValueError("cerceve 'bulanik' ya da 'kirp' olmalı")
+    ses = _ses_var(film)
     dizin = proje.dizin / "yayin"
     dizin.mkdir(exist_ok=True)
-    hedef = dizin / f"shorts_{int(baslangic)}.mp4"
-    filtre = ("[0:v]split[a][b];[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-              "boxblur=30:3,eq=brightness=-0.12[arka];[b]scale=1080:-2[on];[arka][on]overlay=(W-w)/2:(H-h)/2")
+    hedef = dizin / (f"{ad}.mp4" if ad else f"shorts_{int(temiz[0][0])}.mp4")
+
+    filtre = []
+    for i, (bas, son) in enumerate(temiz):
+        filtre.append(f"[0:v]trim={bas:.3f}:{son:.3f},setpts=PTS-STARTPTS[v{i}]")
+        if ses:
+            filtre.append(f"[0:a]atrim={bas:.3f}:{son:.3f},asetpts=PTS-STARTPTS[a{i}]")
+    girisler = "".join(f"[v{i}]" + (f"[a{i}]" if ses else "") for i in range(len(temiz)))
+    filtre.append(f"{girisler}concat=n={len(temiz)}:v=1:a={1 if ses else 0}[ham]" + ("[ses]" if ses else ""))
+    if cerceve == "kirp":
+        filtre.append("[ham]scale=-2:1920,crop=1080:1920[dik]")
+    else:
+        filtre.append("[ham]split[a][b];[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                      "boxblur=30:3,eq=brightness=-0.12[arka];[b]scale=1080:-2[on];[arka][on]overlay=(W-w)/2:(H-h)/2[dik]")
+    son_etiket = "[dik]"
     gecici = None
     if baslik.strip():
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
             f.write(baslik.strip())
             gecici = f.name
-        filtre += (f",drawtext=textfile='{filtre_yolu(gecici)}'{yazi_tipi_secenegi()}:fontcolor=white:"
-                   f"fontsize=64:borderw=5:bordercolor=black:x=(w-text_w)/2:y=260")
-    filtre += ",format=yuv420p[v]"
+        filtre.append(f"[dik]drawtext=textfile='{filtre_yolu(gecici)}'{yazi_tipi_secenegi()}:fontcolor=white:"
+                      f"fontsize=64:borderw=5:bordercolor=black:x=(w-text_w)/2:y=260[yazili]")
+        son_etiket = "[yazili]"
+    filtre.append(f"{son_etiket}format=yuv420p[v]")
     try:
-        ffmpeg("-ss", f"{baslangic:.2f}", "-t", f"{uzunluk:.2f}", "-i", film, "-filter_complex", filtre,
-               "-map", "[v]", "-map", "0:a?", "-c:v", "libx264", "-crf", "20", "-c:a", "aac", hedef)
+        ffmpeg("-i", film, "-filter_complex", ";".join(filtre), "-map", "[v]",
+               *(["-map", "[ses]", "-c:a", "aac", "-b:a", "160k"] if ses else []),
+               "-c:v", "libx264", "-crf", "20", "-r", "30", hedef)
     finally:
         if gecici:
             Path(gecici).unlink(missing_ok=True)
     return hedef
+
+
+def _ses_var(video) -> bool:
+    from ..medya import ses_var_mi
+    return ses_var_mi(video)
 
 
 def youtube_paketi(proje: Proje, model_cagir, shorts: bool = True) -> dict:
