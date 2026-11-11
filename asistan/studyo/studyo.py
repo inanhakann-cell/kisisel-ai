@@ -2,6 +2,7 @@
 import json
 import math
 import random
+import re
 import shutil
 import tempfile
 import threading
@@ -19,6 +20,11 @@ SAHNE_AZAMI_SURE = 600.0
 
 # GPU aynı anda tek üretim yapsın (sohbet ve web paneli aynı anda üretim isteyebilir)
 URETIM_KILIDI = threading.Lock()
+
+
+def _etiket(sahne: Sahne) -> str:
+    """Önizlemede ekrana yazılacak sahne adı; açıklama zaten numarayla başlıyorsa tekrarlamaz."""
+    return sahne.aciklama if re.match(r"^\s*\d+[.)]", sahne.aciklama) else f"#{sahne.no} {sahne.aciklama}"
 
 
 class Studyo:
@@ -113,7 +119,7 @@ class Studyo:
         if parca_sayisi == 1:
             with URETIM_KILIDI:
                 self.motor.uret(tam_istem(sahne, proje.karakterler, proje.stil), sahne.sure, hedef,
-                                baslangic_karesi=baslangic, tohum=tohum)
+                                baslangic_karesi=baslangic, tohum=tohum, etiket=_etiket(sahne))
         else:
             self._uzun_cekim_uret(proje, sahne, hedef, parca_sayisi, baslangic, tohum)
         sahne.cekimler.append(str(hedef))
@@ -135,7 +141,8 @@ class Studyo:
                 parca = hedef.with_name(f"{hedef.stem}_parca{i + 1:02}.mp4")
                 with URETIM_KILIDI:
                     self.motor.uret(tam_istem(sahne, proje.karakterler, proje.stil, istem), parca_suresi, parca,
-                                    baslangic_karesi=baslangic, tohum=tohum)
+                                    baslangic_karesi=baslangic, tohum=tohum,
+                                    etiket=f"{_etiket(sahne)} ({i + 1}/{parca_sayisi})")
                 parcalar.append(parca)
                 if i < parca_sayisi - 1:
                     baslangic = son_kare(parca, hedef.with_name(f"{hedef.stem}_parca{i + 1:02}_son.png"))

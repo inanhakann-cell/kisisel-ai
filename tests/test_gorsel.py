@@ -28,9 +28,9 @@ class KayitliMotor(TaslakMotor):
         super().__init__(**kw)
         self.video_cagrilari, self.gorsel_cagrilari = [], []
 
-    def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None):
-        self.video_cagrilari.append({"istem": istem, "baslangic": baslangic_karesi})
-        return super().uret(istem, sure, hedef, baslangic_karesi, tohum)
+    def uret(self, istem, sure, hedef, baslangic_karesi=None, tohum=None, etiket=None):
+        self.video_cagrilari.append({"istem": istem, "baslangic": baslangic_karesi, "etiket": etiket})
+        return super().uret(istem, sure, hedef, baslangic_karesi, tohum, etiket)
 
     def gorsel_uret(self, istem, hedef, tohum=None, referanslar=None):
         self.gorsel_cagrilari.append({"istem": istem, "referanslar": referanslar})
