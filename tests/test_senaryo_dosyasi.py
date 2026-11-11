@@ -38,7 +38,7 @@ class SenaryoDosyasiTesti(unittest.TestCase):
         self.assertFalse(proje.sahne(2).devam)
         self.assertTrue(proje.sahne(3).devam)
         self.assertEqual(proje.sahne(3).sure, 10)
-        self.assertEqual(Proje.yukle(proje.ad).karakter("lila")["secili"], -1)
+        self.assertEqual(Proje.yukle(proje.ad).karakter("lila")["secili"], 0)  # Lila.png otomatik bağlandı
         b3 = self.st.senaryo_dosyasindan(str(SENARYOLAR / "bolum3.json"))
         self.assertEqual(b3.sahne(1).bolum, "Bölüm 3: Misafir")
         self.assertNotEqual(b3.ad, proje.ad)
@@ -101,3 +101,38 @@ class WebSenaryoTesti(unittest.TestCase):
         p = c.post("/api/senaryo-yukle", files={"dosya": ("bolum3.json", veri, "application/json")}).json()
         self.assertEqual(len(p["sahneler"]), 8)
         self.assertEqual(c.post("/api/senaryo-yukle", files={"dosya": ("x.json", b"{", "application/json")}).status_code, 400)
+
+
+@unittest.skipUnless(shutil.which("ffmpeg"), "ffmpeg yok")
+class SenaryoGorselleriTesti(unittest.TestCase):
+    def test_karakter_ve_baslangic_gorselleri_baglanir(self):
+        st = Studyo(motor=TaslakMotor(), model_cagir=lambda m: "{}")
+        proje = st.senaryo_dosyasindan(str(SENARYOLAR / "bolum2.json"))
+        for ad in ("Pof", "Tit", "Lila", "Grum", "Bubu"):
+            k = proje.karakter(ad)
+            self.assertEqual(k["secili"], 0, ad)
+            self.assertTrue(Path(k["gorseller"][0]).exists())
+        self.assertEqual(proje.karakter("Kedi")["gorseller"], [])  # kedinin görseli pakette yok
+        self.assertIsNotNone(proje.sahne(1).baslangic_gorseli)
+        self.assertIsNotNone(proje.sahne(7).baslangic_gorseli)
+        self.assertIsNone(proje.sahne(2).baslangic_gorseli)
+
+    def test_cok_parcali_shorts(self):
+        st = Studyo(motor=TaslakMotor(), model_cagir=lambda m: "{}")
+        proje = st.bos_proje("Shorts testi")
+        film = Path(ayarlar.VERI_DIZINI) / "film_shorts.mp4"
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=640x360:r=24",
+                        "-f", "lavfi", "-i", "sine=frequency=440", "-t", "12", "-pix_fmt", "yuv420p", "-shortest",
+                        str(film)], check=True)
+        from asistan.medya import sure
+        hedef = st.shorts(proje, film=str(film), parcalar=[(1, 4), (8, 10.5)], ad="iki_parca")
+        self.assertAlmostEqual(sure(hedef), 5.5, delta=0.15)
+        kirp = st.shorts(proje, film=str(film), parcalar=[(0, 3)], cerceve="kirp", ad="kirp")
+        boyut = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries",
+                                "stream=width,height", "-of", "csv=p=0", str(kirp)], capture_output=True,
+                               text=True).stdout.strip()
+        self.assertEqual(boyut, "1080,1920")
+        with self.assertRaises(ValueError):
+            st.shorts(proje, film=str(film), parcalar=[(20, 25)])
+        with self.assertRaises(ValueError):
+            st.shorts(proje, film=str(film), parcalar=[(0, 3)], cerceve="yanlis")

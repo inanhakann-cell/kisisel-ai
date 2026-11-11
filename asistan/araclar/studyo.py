@@ -106,9 +106,11 @@ def youtube_paketi_hazirla(proje: str, shorts: bool = True) -> str:
             f"\nAçıklama ve etiketler: {p.dizin / 'yayin' / 'aciklama.txt'}")
 
 
-def shorts_kes(proje: str, baslangic: float = 0, uzunluk: float = 59, baslik: str = "") -> str:
+def shorts_kes(proje: str, baslangic: float = 0, uzunluk: float = 59, baslik: str = "", parcalar: list = None,
+               cerceve: str = "bulanik") -> str:
     p = Proje.yukle(proje)
-    return f"Shorts hazır: {_s().shorts(p, float(baslangic), float(uzunluk), baslik)}"
+    parca = [(float(a), float(b)) for a, b in parcalar] if parcalar else None
+    return f"Shorts hazır: {_s().shorts(p, float(baslangic), float(uzunluk), baslik, parca, cerceve)}"
 
 
 def bos_proje_ac(baslik: str, stil: str = "", karakterler: list = None) -> str:
@@ -248,7 +250,10 @@ TANIMLAR = [
     _t("senaryo_dosyasi_yukle", "Hazır yazılmış senaryo JSON dosyasından (ör. senaryolar/ klasöründeki) proje kurar.",
        {"dosya": _S}, ["dosya"]),
     _t("shorts_kes", "Filmin belirli bir anından dikey (9:16) en fazla 59 sn'lik Shorts/Reels/TikTok kesiti üretir.",
-       {"proje": _PROJE, "baslangic": _N, "uzunluk": _N, "baslik": _S}, ["proje"]),
+       {"proje": _PROJE, "baslangic": _N, "uzunluk": _N, "baslik": _S,
+        "parcalar": {"type": "array", "description": "Birleştirilecek aralıklar [[başlangıç, bitiş], ...] (sn)",
+                     "items": {"type": "array", "items": {"type": "number"}}},
+        "cerceve": {"type": "string", "enum": ["bulanik", "kirp"]}}, ["proje"]),
 ]
 
 FONKSIYONLAR = {t["function"]["name"]: globals()[t["function"]["name"]] for t in TANIMLAR}
