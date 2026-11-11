@@ -157,7 +157,11 @@ h3{font-size:14px;margin:18px 0 8px}
   <div class="radyo">
     <label><input type="radio" name="npTur" value="kisa" checked> Kısa klip (sahne sayısı)</label>
     <label><input type="radio" name="npTur" value="uzun"> Uzun video (dakika)</label>
+    <label><input type="radio" name="npTur" value="tasi"> Flow vb. taşı</label>
   </div>
+  <div id="npTasi" style="display:none;font-size:12px;color:var(--muted);margin-top:8px">
+    Boş proje açılır; ardından <b>⇪ Klip içe aktar</b> ile Flow'dan indirdiğin klipleri sırayla yükle.
+    Fikir alanına projenin adını, stile çizim stilini yaz.</div>
   <div id="npKisa"><label>Sahne sayısı</label><input id="npSahne" type="number" min="1" max="30" value="5"></div>
   <div id="npUzun" style="display:none"><label>Hedef süre (dakika)</label><input id="npDakika" type="number" min="1" max="60" step="0.5" value="5"></div>
   <label>Stil</label>
@@ -370,6 +374,7 @@ function ciz(){
       <button class="ana" id="tumunuUret" ${uretilen===p.sahneler.length?"":""}>▶ Eksikleri üret</button>
       <button id="uzunCekimBtn">⟿ Uzun çekim</button>
       <button id="sahneEkleBtn">+ Sahne</button>
+      <button id="iceAktarBtn" title="Flow vb. yerlerden indirdiğin klipleri sahne olarak ekle">⇪ Klip içe aktar</button>
       <button id="montajBtn" ${uretilen<p.sahneler.length?"disabled title='Önce tüm sahneleri üret'":""}>🎬 Birleştir</button>
       <button id="youtubeBtn" ${p.filmler.length?"":"disabled title='Önce filmi birleştir'"}>▲ YouTube paketi</button>
     </div></div>`;
@@ -398,6 +403,7 @@ function ciz(){
         <div class="butonlar">
           <button class="kucuk" data-eylem="uret" ${isMesgul?"disabled":""}>${s.cekimler.length?"↻ Yeni çekim":"▶ Üret"}</button>
           <button class="kucuk" data-eylem="uzat" ${isMesgul?"disabled":""}>⟿ Uzat</button>
+          <button class="kucuk" data-eylem="yukle" title="Bu sahneye hazır klip yükle">⇪</button>
           <button class="kucuk" data-eylem="yukari" title="Öne al">↑</button>
           <button class="kucuk tehlike" data-eylem="sil" title="Sil">✕</button>
         </div>
@@ -432,6 +438,13 @@ function baglaProjeOlaylari(){
     projeYukle(ad);
   };
   $("#montajBtn").onclick = () => ac("#montajP");
+  $("#iceAktarBtn").onclick = () => dosyaSec(true, async dosyalar => {
+    const fd = new FormData(); for(const d of dosyalar) fd.append("dosyalar", d);
+    bildir(`${dosyalar.length} klip yükleniyor…`);
+    try{ const r = await api(`/api/projeler/${enc}/ice-aktar`,{method:"POST",body:fd}); durum.proje = r.proje; ciz(); projeListesi();
+         bildir(`${r.eklenen.length} klip eklendi (sahne ${r.eklenen.join(", ")})`); }
+    catch(e){ bildir(e.message,true); }
+  });
   $("#youtubeBtn").onclick = () => isBaslat(`/api/projeler/${enc}/youtube`, {shorts:true}, "YouTube paketi hazırlanıyor");
   document.querySelectorAll("[data-kopyala]").forEach(b => b.onclick = async () => {
     try{ await navigator.clipboard.writeText(b.dataset.kopyala); bildir("Kopyalandı"); }catch{ bildir("Kopyalanamadı", true); }
@@ -445,7 +458,12 @@ function baglaProjeOlaylari(){
     kart.querySelectorAll("[data-eylem]").forEach(b => b.onclick = async () => {
       const e = b.dataset.eylem;
       try{
-        if(e==="uret") isBaslat(`/api/projeler/${enc}/sahneler/${no}/uret`, null, `Sahne ${no} sıraya alındı`);
+        if(e==="yukle") dosyaSec(false, async ([d]) => {
+          const fd = new FormData(); fd.append("dosya", d); bildir("Klip yükleniyor…");
+          try{ durum.proje = await api(`/api/projeler/${enc}/sahneler/${no}/ice-aktar`,{method:"POST",body:fd}); ciz(); bildir(`Sahne ${no} için yeni çekim eklendi`); }
+          catch(err){ bildir(err.message,true); }
+        });
+        else if(e==="uret") isBaslat(`/api/projeler/${enc}/sahneler/${no}/uret`, null, `Sahne ${no} sıraya alındı`);
         else if(e==="kaydet" || e==="kaydetUret"){
           durum.proje = await api(`/api/projeler/${enc}/sahneler/${no}`,{method:"PATCH",body:alanlar()});
           bildir("Kaydedildi");
@@ -463,6 +481,12 @@ function baglaProjeOlaylari(){
   });
 }
 
+function dosyaSec(coklu, geri){
+  const g = Object.assign(document.createElement("input"), {type:"file", accept:"video/*", multiple:coklu});
+  g.onchange = () => g.files.length && geri([...g.files]);
+  g.click();
+}
+
 async function isBaslat(yol, govde, mesaj){
   try{
     const is_ = await api(yol,{method:"POST",body:govde||{}});
@@ -474,12 +498,23 @@ async function isBaslat(yol, govde, mesaj){
 /* Yeni proje */
 $("#yeniProjeBtn").onclick = () => ac("#yeniProje");
 document.querySelectorAll("input[name=npTur]").forEach(r => r.onchange = () => {
-  const uzun = document.querySelector("input[name=npTur]:checked").value==="uzun";
-  $("#npKisa").style.display = uzun?"none":""; $("#npUzun").style.display = uzun?"":"none";
+  const tur = document.querySelector("input[name=npTur]:checked").value;
+  $("#npKisa").style.display = tur==="kisa"?"":"none"; $("#npUzun").style.display = tur==="uzun"?"":"none";
+  $("#npTasi").style.display = tur==="tasi"?"":"none";
+  $("#npOlustur").textContent = tur==="tasi" ? "Boş proje aç" : "Senaryoyu yaz";
 });
 $("#npOlustur").onclick = async () => {
   const fikir = $("#npFikir").value.trim(); if(!fikir){ bildir("Fikir yaz",true); return; }
-  const uzun = document.querySelector("input[name=npTur]:checked").value==="uzun";
+  const tur = document.querySelector("input[name=npTur]:checked").value, uzun = tur==="uzun";
+  if(tur==="tasi"){
+    try{
+      const p = await api("/api/bos-proje",{method:"POST",body:{baslik:fikir, stil:$("#npStil").value}});
+      $("#yeniProje").classList.remove("acik");
+      durum.projeAd = p.ad; localStorageYaz("proje", p.ad); await projeListesi(); durum.proje = p; ciz();
+      bildir("Proje açıldı. Şimdi ⇪ Klip içe aktar ile kliplerini yükle.");
+    }catch(e){ bildir(e.message,true); }
+    return;
+  }
   const govde = {fikir, stil: $("#npStil").value, sahne_sayisi: +$("#npSahne").value};
   if(uzun) govde.hedef_dakika = +$("#npDakika").value;
   $("#yeniProje").classList.remove("acik");

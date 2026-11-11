@@ -90,6 +90,21 @@ Ya da sohbette: *"Bir kedinin uzaya yolculuğu hakkında 4 sahnelik video yap"*,
 - YouTube paketi `cikti/projeler/<proje>/yayin/` klasörüne yazılır: `aciklama.txt`, `kapak.jpg`, `shorts_0.mp4`.
 - Plan ve yol haritası: [docs/VIDEO_STUDYOSU_PLANI.md](docs/VIDEO_STUDYOSU_PLANI.md)
 
+## Flow (veya başka araç) projesini taşıma
+
+Flow'da başladığın bir projeye burada devam edebilirsin:
+
+1. Flow'da her sahnenin klibini **indir** (mp4). Dosya adlarını sırayla ver: `01_...mp4`, `02_...mp4`.
+2. Uygulamada **+ Yeni video → Flow vb. taşı**: proje adını ve çizim stilini yaz (ör. `anime style, cel shading`).
+3. **⇪ Klip içe aktar** ile klipleri seç; dosya adı sırasıyla sahne olurlar. Kliplerin sesi korunur.
+4. Karakterleri sohbetten tanımla, sonra eksik kısmı üret: son sahnede **⟿ Uzat** (son karesinden devam
+   eder), **⟿ Uzun çekim** ya da **+ Sahne**. Sohbette de olur: *"Kayıp Kılıç projesinin son sahnesinden
+   devam eden 4 sahne daha yaz ve üret"*.
+5. **🎬 Birleştir** ve **▲ YouTube paketi**.
+
+Flow'da kullandığın istemleri (prompt) de sahnelerin **Düzenle** bölümüne yapıştırırsan, yeniden
+üretimler ve devam sahneleri aynı tarzda olur.
+
 ## Kendi kendine öğrenme
 
 1. Kullanırken iyi cevaplara `/iyi`, kötülere `/kotu <doğrusu>` yaz. Bunlar

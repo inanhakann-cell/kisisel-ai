@@ -111,6 +111,17 @@ def shorts_kes(proje: str, baslangic: float = 0, uzunluk: float = 59, baslik: st
     return f"Shorts hazır: {_s().shorts(p, float(baslangic), float(uzunluk), baslik)}"
 
 
+def bos_proje_ac(baslik: str, stil: str = "", karakterler: list = None) -> str:
+    p = _s().bos_proje(baslik, stil, karakterler or [])
+    return f"Boş proje açıldı: {p.ad}. Klipleri klip_ice_aktar ile ekleyebilirsin."
+
+
+def klip_ice_aktar(proje: str, dosya: str, no: int = None, aciklama: str = "", istem: str = "") -> str:
+    p = Proje.yukle(proje)
+    sahne = _s().klip_ice_aktar(p, dosya, None if no is None else int(no), aciklama, istem)
+    return f"Klip sahne {sahne.no} olarak eklendi ({sahne.sure:g} sn).\n{p.ozet()}"
+
+
 def _t(ad, aciklama, ozellikler, gerekli):
     return {"type": "function", "function": {"name": ad, "description": aciklama, "parameters": {
         "type": "object", "properties": ozellikler, "required": gerekli}}}
@@ -155,6 +166,14 @@ TANIMLAR = [
         "İngilizce görsel istem"}, "devam": _B}, ["proje", "aciklama", "sure"]),
     _t("youtube_paketi_hazirla", "Birleştirilmiş film için YouTube başlıkları, açıklama, etiketler, bölüm zaman "
        "damgaları, kapak görseli ve dikey Shorts hazırlar.", {"proje": _PROJE, "shorts": _B}, ["proje"]),
+    _t("bos_proje_ac", "Senaryo yazmadan boş bir video projesi açar; başka bir araçta (ör. Flow) başlanmış "
+       "bir projeyi taşımak için.", {"baslik": _S, "stil": {"type": "string", "description": "İngilizce görsel stil"},
+       "karakterler": {"type": "array", "items": {"type": "object", "properties": {"ad": _S, "tarif": _S}}}},
+       ["baslik"]),
+    _t("klip_ice_aktar", "Bilgisayardaki hazır bir video klibini (ör. Flow'dan indirilmiş) projeye sahne olarak "
+       "ekler. no verilirse o sahnenin yeni çekimi olur.", {"proje": _PROJE, "dosya": _S, "no": _NO,
+       "aciklama": _S, "istem": {"type": "string", "description": "Klibin İngilizce istemi (biliniyorsa)"}},
+       ["proje", "dosya"]),
     _t("shorts_kes", "Filmin belirli bir anından dikey (9:16) en fazla 59 sn'lik Shorts/Reels/TikTok kesiti üretir.",
        {"proje": _PROJE, "baslangic": _N, "uzunluk": _N, "baslik": _S}, ["proje"]),
 ]
